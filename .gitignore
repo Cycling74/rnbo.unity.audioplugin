@@ -1,5 +1,7 @@
 build/
 
+*.meta
+
 # Prerequisites
 *.d
 
