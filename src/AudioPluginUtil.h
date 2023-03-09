@@ -1,4 +1,5 @@
 //adapted from AudioPluginUtil from https://github.com/Unity-Technologies/NativeAudioPlugins
+//Copyright (c) 2014, Unity Technologies - See Unity-LICENSE.txt
 #pragma once
 
 #include "AudioPluginInterface.h"

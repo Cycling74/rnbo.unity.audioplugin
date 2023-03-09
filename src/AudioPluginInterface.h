@@ -1,3 +1,5 @@
+//Copyright (c) 2014, Unity Technologies - See Unity-LICENSE.txt
+
 #pragma once
 
 #define UNITY_AUDIO_PLUGIN_API_VERSION 0x010402
