@@ -1,3 +1,4 @@
+// Copyright (c) 2023 Cycling '74
 using System;
 using System.Collections.Generic;
 
