@@ -70,20 +70,55 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
     [DllImport("${PLUGIN_NAME}")]
     public static extern bool RNBOReleaseDataRef(int key, IntPtr id);
 
-    public ParameterInfo[] Parameters {
-        get; private set;
+    private static PatcherDescription patcherDescription;
+    public static PatcherDescription PatcherDescription {
+        get {
+            if (patcherDescription == null) {
+                string descString = Marshal.PtrToStringAnsi(RNBOGetDescription());
+                patcherDescription = JsonUtility.FromJson<PatcherDescription>(descString)!;
+            }
+            return patcherDescription;
+        }
     }
 
-    public Port[] Inports {
-        get; private set;
+    private static ParameterInfo[] parameters;
+    public static ParameterInfo[] Parameters {
+        get {
+            if (parameters == null) {
+                parameters = PatcherDescription.parameters.ToArray();
+            }
+            return parameters;
+        }
     }
 
-    public Port[] Outports {
-        get; private set;
+    private static Port[] inports;
+    public static Port[] Inports {
+        get {
+            if (inports == null) {
+                inports = PatcherDescription.inports.ToArray();
+            }
+            return inports;
+        }
     }
 
-    public DataRef[] DataRefs {
-        get; private set;
+    private static Port[] outports;
+    public static Port[] Outports {
+        get {
+            if (outports == null) {
+                outports = PatcherDescription.outports.ToArray();
+            }
+            return outports;
+        }
+    }
+
+    private static DataRef[] dataRefs;
+    public static DataRef[] DataRefs {
+        get {
+            if (dataRefs == null) {
+                dataRefs = PatcherDescription.externalDataRefs.ToArray();
+            }
+            return dataRefs;
+        }
     }
 
     public static MessageTag Tag(string v) {
@@ -110,19 +145,8 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
         }
     }
 
-    private int pluginKey;
     public int PluginKey {
-        get => pluginKey;
-        internal set {
-            pluginKey = value;
-            string descString = Marshal.PtrToStringAnsi(RNBOGetDescription());
-
-            PatcherDescription desc = JsonUtility.FromJson<PatcherDescription>(descString)!;
-            Parameters = desc.parameters.ToArray();
-            Inports = desc.inports.ToArray();
-            Outports = desc.outports.ToArray();
-            DataRefs = desc.externalDataRefs.ToArray();
-        }
+        get; internal set;
     }
 
     private bool registered = false;
@@ -130,12 +154,12 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
         if (!registered) {
             registered = RegisterParameterEventDelegate() && RegisterMessageEventDelegate();
         }
-        RNBOPoll(pluginKey);
+        RNBOPoll(PluginKey);
     }
 
     public bool ResolveTag(MessageTag tag, out string tagStr) {
         IntPtr p;
-        var r = RNBOResolveTag(pluginKey, tag, out p);
+        var r = RNBOResolveTag(PluginKey, tag, out p);
         if (r) {
             tagStr = Marshal.PtrToStringAnsi(p);
         } else {
@@ -144,16 +168,18 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
         return r;
     }
 
-    public ParameterInfo GetParamByIndex(int index) => Array.Find(Parameters, p => p.index == index);
-    public ParameterInfo GetParamByName(string name) => Array.Find(Parameters, p => name.Equals(p.name));
-    public ParameterInfo GetParamById(string id) => Array.Find(Parameters, p => id.Equals(p.paramId));
+    public static ParameterInfo GetParamByIndex(int index) => Array.Find(Parameters, p => p.index == index);
+    public static ParameterInfo[] GetParamsByName(string name) => Array.FindAll(Parameters, p => name.Equals(p.name));
+    public static ParameterInfo GetParamById(string id) => Array.Find(Parameters, p => id.Equals(p.paramId));
 
-    private Dictionary<string, int> parameterNameToIndex;
-    public int? GetParamIndexByName(string name) {
+    private static Dictionary<string, int> parameterNameToIndex;
+    public static int? GetFirstParamIndexByName(string name) {
         if (parameterNameToIndex == null) {
             parameterNameToIndex = new Dictionary<string, int>();
             foreach (var p in Parameters) {
-                parameterNameToIndex.Add(p.name, p.index);
+                if (!parameterNameToIndex.ContainsKey(p.name)) {
+                    parameterNameToIndex.Add(p.name, p.index);
+                }
             }
         }
         int index = 0;
@@ -163,8 +189,8 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
         return null;
     }
 
-    private Dictionary<string, int> parameterIdToIndex;
-    public int? GetParamIndexById(string id) {
+    private static Dictionary<string, int> parameterIdToIndex;
+    public static int? GetParamIndexById(string id) {
         if (parameterIdToIndex == null) {
             parameterIdToIndex = new Dictionary<string, int>();
             foreach (var p in Parameters) {
@@ -179,35 +205,35 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
     }
 
     public bool GetParamValue(int index, out ParameterValue value) {
-        return RNBOGetParamValue(pluginKey, (ParameterIndex)index, out value);
+        return RNBOGetParamValue(PluginKey, (ParameterIndex)index, out value);
     }
 
     public bool SetParamValue(int index, ParameterValue value, MillisecondTime attime = 0) {
-        return RNBOSetParamValue(pluginKey, (ParameterIndex)index, value, attime);
+        return RNBOSetParamValue(PluginKey, (ParameterIndex)index, value, attime);
     }
 
     public bool GetParamValueNormalized(int index, out ParameterValue value) {
-        return RNBOGetParamValueNormalized(pluginKey, (ParameterIndex)index, out value);
+        return RNBOGetParamValueNormalized(PluginKey, (ParameterIndex)index, out value);
     }
 
     public bool SetParamValueNormalized(int index, ParameterValue value, MillisecondTime attime = 0) {
-        return RNBOSetParamValueNormalized(pluginKey, (ParameterIndex)index, value, attime);
+        return RNBOSetParamValueNormalized(PluginKey, (ParameterIndex)index, value, attime);
     }
 
     public bool SendBang(MessageTag tag, MillisecondTime atTime = 0) {
-        return RNBOSendMessageBang(pluginKey, tag, atTime);
+        return RNBOSendMessageBang(PluginKey, tag, atTime);
     }
 
     public bool SendMessage(MessageTag tag, Float value, MillisecondTime atTime = 0) {
-        return RNBOSendMessageNumber(pluginKey, tag, value, atTime);
+        return RNBOSendMessageNumber(PluginKey, tag, value, atTime);
     }
 
     public bool SendMessage(MessageTag tag, Float[] values, MillisecondTime atTime = 0) {
-        return RNBOSendMessageList(pluginKey, tag, values, (IntPtr)values.Length, atTime);
+        return RNBOSendMessageList(PluginKey, tag, values, (IntPtr)values.Length, atTime);
     }
 
     public bool SendMIDI(byte[] data, MillisecondTime atTime = 0) {
-        return RNBOSendMIDI(pluginKey, data, (IntPtr)data.Length, atTime);
+        return RNBOSendMIDI(PluginKey, data, (IntPtr)data.Length, atTime);
     }
 
     public bool SendMIDINoteOn(byte channel, byte noteNum, byte velocity, MillisecondTime atTime = 0) {
@@ -236,14 +262,14 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
 
     public bool LoadDataRef(string id, float[] data, int channels, int samplerate) {
         IntPtr idPtr = (IntPtr)Marshal.StringToHGlobalAnsi(id);
-        var r = RNBOCopyLoadDataRef(pluginKey, idPtr, data, (IntPtr)data.Length, (IntPtr)channels, (IntPtr)samplerate);
+        var r = RNBOCopyLoadDataRef(PluginKey, idPtr, data, (IntPtr)data.Length, (IntPtr)channels, (IntPtr)samplerate);
         Marshal.FreeHGlobal(idPtr);
         return r;
     }
 
     public bool ReleaseDataRef(string id) {
         IntPtr idPtr = (IntPtr)Marshal.StringToHGlobalAnsi(id);
-        var r = RNBOReleaseDataRef(pluginKey, idPtr);
+        var r = RNBOReleaseDataRef(PluginKey, idPtr);
         Marshal.FreeHGlobal(idPtr);
         return r;
     }
@@ -261,7 +287,7 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
                 e(this, new ParameterChangedEventArgs((int)index, value, time));
             }
         };
-        var r = RNBORegisterParameterEventCallback(pluginKey, Marshal.GetFunctionPointerForDelegate(d));
+        var r = RNBORegisterParameterEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(d));
         registeredParameterEventDelegate = d;
         return r;
     }
@@ -290,7 +316,7 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
                 e(this, new MessageEventArgs(tag, t, values, time));
             }
         };
-        var r = RNBORegisterMessageEventCallback(pluginKey, Marshal.GetFunctionPointerForDelegate(d));
+        var r = RNBORegisterMessageEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(d));
         registeredMessageEventDelegate = d;
         return r;
     }
