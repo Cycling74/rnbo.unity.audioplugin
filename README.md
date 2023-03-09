@@ -6,6 +6,8 @@ Here we implement a Native Audio Plugin for Unity as well as a helper object for
 ## Resources
 
 * [rnbo](https://rnbo.cycling74.com/)
-* [Unity NativeAudioPlugins](https://github.com/Unity-Technologies/NativeAudioPlugins)
-* [Unity NativeAudioPlugins Docs](https://docs.unity3d.com/Manual/AudioMixerNativeAudioPlugin.html)
-* [Unity package manifest docs](https://docs.unity3d.com/Manual/upm-manifestPkg.html)
+* Unity
+  * [NativeAudioPlugins](https://github.com/Unity-Technologies/NativeAudioPlugins)
+  * [NativeAudioPlugins Docs](https://docs.unity3d.com/Manual/AudioMixerNativeAudioPlugin.html)
+  * [Package Manifest Docs](https://docs.unity3d.com/Manual/upm-manifestPkg.html)
+  * [Assembly Definition docs](https://docs.unity3d.com/Manual/ScriptCompilationAssemblyDefinitionFiles.html)
