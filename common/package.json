@@ -1,9 +1,9 @@
 {
-  "name": "com.cycling74.rnbounitytypes",
+  "name": "com.cycling74.rnbotypes",
   "version": "0.0.1",
   "displayName": "RNBO Unity Types",
   "description": "Shared types for RNBO Unity Audio plugins",
-  "unity": "5.0.0",
+  "unity": "2017.1",
   "documentationUrl": "https://github.com/Cycling74/rnbo.unity.audioplugin",
   "changelogUrl": "https://github.com/Cycling74/rnbo.unity.audioplugin/CHANGELOG.md",
   "licensesUrl": "https://github.com/Cycling74/rnbo.unity.audioplugin/LICENSE.md",
