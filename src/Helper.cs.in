@@ -8,7 +8,7 @@ using RNBOTypes;
 
 //https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/built-in-types
 
-public class ${PRODUCT_NAME_ID}Helper : MonoBehaviour {
+public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
     public event EventHandler<ParameterChangedEventArgs> ParameterChangedEvent;
     public event EventHandler<MessageEventArgs> MessageEvent;
 
@@ -87,19 +87,19 @@ public class ${PRODUCT_NAME_ID}Helper : MonoBehaviour {
     }
 
     private static Dictionary<int, GameObject> instances = new Dictionary<int, GameObject>();
-    public static ${PRODUCT_NAME_ID}Helper FindById(int key) {
+    public static ${PLUGIN_NAME_ID}Helper FindById(int key) {
         lock (instances) {
             GameObject go;
             if (!instances.TryGetValue(key, out go)) {
-                go = new GameObject(String.Format("${PRODUCT_NAME_ID}HelperObject{0}", key));
+                go = new GameObject(String.Format("${PLUGIN_NAME_ID}HelperObject{0}", key));
                 DontDestroyOnLoad(go);
                 instances.Add(key, go);
 
-                ${PRODUCT_NAME_ID}Helper helper = go.AddComponent<${PRODUCT_NAME_ID}Helper>();
+                ${PLUGIN_NAME_ID}Helper helper = go.AddComponent<${PLUGIN_NAME_ID}Helper>();
                 helper.PluginKey = key;
                 return helper;
             }
-            return go.GetComponent<${PRODUCT_NAME_ID}Helper>();
+            return go.GetComponent<${PLUGIN_NAME_ID}Helper>();
         }
     }
 

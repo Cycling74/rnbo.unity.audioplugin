@@ -14,7 +14,7 @@ set (CMAKE_CXX_STANDARD 17)
 set(PLUGIN_NAME "RNBOPlugin" CACHE STRING "The name of the audio plugin")
 set(PLUGIN_VERSION "0.0.1" CACHE STRING "Plugin version string")
 set(PLUGIN_MANUFACTURER_NAME "Cycling '74" CACHE STRING "Specify the name of the plugin's author")
-set(PLUGIN_MANUFACTURER_NAME "Cycling '74" CACHE STRING "Specify the name of the plugin's author")
+set(PLUGIN_MANUFACTURER_TLD "com" CACHE STRING "the Top Level Domain for your company's website URL")
 
 set(CONAN_PROFILE "default" CACHE STRING "The profile to use for building conan deps, this is useful for cross compiling")
 
@@ -34,14 +34,14 @@ set(DESCRIPTION_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
 rnbo_write_description_header_if_exists(${RNBO_DESCRIPTION_FILE} ${DESCRIPTION_INCLUDE_DIR})
 
 #compute bundle id
-STRING(REGEX REPLACE "[^A-Za-z0-9]" "" PRODUCT_NAME_ID ${PLUGIN_NAME})
-STRING(REGEX REPLACE "[^A-Za-z0-9]" "" COMPANY_NAME_ID ${PLUGIN_MANUFACTURER_NAME})
-STRING(TOLOWER  ${PRODUCT_NAME_ID} PRODUCT_NAME_LOWER_ID)
-STRING(TOLOWER  ${COMPANY_NAME_ID} COMPANY_NAME_LOWER_ID)
+STRING(REGEX REPLACE "[^A-Za-z0-9]" "" PLUGIN_NAME_ID ${PLUGIN_NAME})
+STRING(REGEX REPLACE "[^A-Za-z0-9]" "" PLUGIN_MANUFACTURER_NAME_ID ${PLUGIN_MANUFACTURER_NAME})
+STRING(TOLOWER  ${PLUGIN_NAME_ID} PLUGIN_NAME_LOWER_ID)
+STRING(TOLOWER  ${PLUGIN_MANUFACTURER_NAME_ID} PLUGIN_MANUFACTURER_NAME_LOWER_ID)
 
-SET(MACOSX_BUNDLE_GUI_IDENTIFIER "com.${COMPANY_NAME_ID}.${PRODUCT_NAME_ID}")
+SET(MACOSX_BUNDLE_GUI_IDENTIFIER "${PLUGIN_MANUFACTURER_TLD}.${PLUGIN_MANUFACTURER_NAME_ID}.${PLUGIN_NAME_ID}")
 
-set(PACKAGE_DIR ${CMAKE_BINARY_DIR}/Package)
+set(PACKAGE_DIR ${CMAKE_BINARY_DIR}/${PLUGIN_NAME_ID})
 
 add_library(RNBOUnityPlugin MODULE)
 set_target_properties(RNBOUnityPlugin PROPERTIES
@@ -80,7 +80,7 @@ target_include_directories(RNBOUnityPlugin
 
 #configure helper
 set(HELPER_OUTPUT_DIR ${PACKAGE_DIR}/Assets/Scripts/)
-set(HELPER_NAME ${PRODUCT_NAME_ID}Helper.cs)
+set(HELPER_NAME ${PLUGIN_NAME_ID}Helper.cs)
 configure_file(${CMAKE_CURRENT_LIST_DIR}/src/Helper.cs.in ${HELPER_OUTPUT_DIR}/${HELPER_NAME})
 
 #write package.json
@@ -122,11 +122,5 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
 	set_target_properties(RNBOUnityPlugin PROPERTIES PREFIX "")
 endif()
 
-install(TARGETS RNBOUnityPlugin
-	LIBRARY DESTINATION Assets/Plugins
-)
-
-install(FILES ${HELPER_OUTPUT_DIR}/${HELPER_NAME}
-	DESTINATION Assets/Scripts
-)
+install(DIRECTORY ${PACKAGE_DIR} DESTINATION .)
 

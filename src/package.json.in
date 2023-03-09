@@ -1,5 +1,5 @@
 {
-  "name": "com.${COMPANY_NAME_LOWER_ID}.${PRODUCT_NAME_LOWER_ID}",
+  "name": "${PLUGIN_MANUFACTURER_TLD}.${PLUGIN_MANUFACTURER_NAME_LOWER_ID}.${PLUGIN_NAME_LOWER_ID}",
   "version": "0.0.1",
   "displayName": "${PLUGIN_NAME}",
   "unity": "2017.1",
