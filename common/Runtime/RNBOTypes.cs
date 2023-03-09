@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 //TODO: alter based on define
 using Float = System.Double;
@@ -7,25 +8,27 @@ using ParameterValue = System.Double;
 using ParameterIndex = System.UIntPtr;
 using MessageTag = System.UInt32;
 
-public const byte NOTE_OFF = 0x80;
-public const byte NOTE_ON = 0x90;
-public const byte KEY_PRESSURE = 0xA0;
-public const byte CONTROL_CHANGE = 0xB0;
-public const byte PITCH_BEND_CHANGE = 0xE0;
-public const byte SONG_POSITION_POINTER = 0xF2;
-public const byte PROGRAM_CHANGE = 0xC0;
-public const byte CHANNEL_PRESSURE = 0xD0;
-public const byte QUARTER_FRAME = 0xF1;
-public const byte SONG_SELECT = 0xF3;
-public const byte TUNE_REQUEST = 0xF6;
-public const byte TIMING_CLOCK = 0xF8;
-public const byte START = 0xFA;
-public const byte CONTINUE = 0xFB;
-public const byte STOP = 0xFC;
-public const byte ACTIVE_SENSE = 0xFE;
-public const byte RESET = 0xFF;
-public const byte SYSEX_START = 0xF0;
-public const byte SYSEX_END = 0xF7;
+public class MidiHeaders {
+    public const byte NOTE_OFF = 0x80;
+    public const byte NOTE_ON = 0x90;
+    public const byte KEY_PRESSURE = 0xA0;
+    public const byte CONTROL_CHANGE = 0xB0;
+    public const byte PITCH_BEND_CHANGE = 0xE0;
+    public const byte SONG_POSITION_POINTER = 0xF2;
+    public const byte PROGRAM_CHANGE = 0xC0;
+    public const byte CHANNEL_PRESSURE = 0xD0;
+    public const byte QUARTER_FRAME = 0xF1;
+    public const byte SONG_SELECT = 0xF3;
+    public const byte TUNE_REQUEST = 0xF6;
+    public const byte TIMING_CLOCK = 0xF8;
+    public const byte START = 0xFA;
+    public const byte CONTINUE = 0xFB;
+    public const byte STOP = 0xFC;
+    public const byte ACTIVE_SENSE = 0xFE;
+    public const byte RESET = 0xFF;
+    public const byte SYSEX_START = 0xF0;
+    public const byte SYSEX_END = 0xF7;
+}
 
 public enum MessageEventType {
     Number,
@@ -65,9 +68,8 @@ public class DataRef {
     public string file;
 }
 
-
 [System.Serializable]
-private class PatcherDescription {
+public class PatcherDescription {
     public int numParameters;
     public List<ParameterInfo> parameters;
     public List<Port> inports;
