@@ -1,6 +1,8 @@
 {
-    "name": "Cycling74.RNBOTypes",
-    "references": [],
+    "name": "${PLUGIN_MANUFACTURER_NAME_ID}.${HELPER_NAME}",
+    "references": [
+      "Cycling74.RNBOTypes"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

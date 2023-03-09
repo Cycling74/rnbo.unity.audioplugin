@@ -4,7 +4,14 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using UnityEngine;
-using RNBOTypes;
+using Cycling74.RNBOTypes;
+
+//TODO how to share these aliases?
+using Float = System.Double;
+using MillisecondTime = System.Double;
+using ParameterValue = System.Double;
+using ParameterIndex = System.UIntPtr;
+using MessageTag = System.UInt32;
 
 //https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/built-in-types
 
@@ -207,7 +214,7 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
         Debug.Assert(channel < (byte)16);
         Debug.Assert(noteNum < (byte)128);
         Debug.Assert(velocity < (byte)128);
-        byte[] data = new byte[] { (byte)(channel | NOTE_ON), noteNum, velocity };
+        byte[] data = new byte[] { (byte)(channel | MIDIHeaders.NOTE_ON), noteNum, velocity };
         return SendMIDI(data, atTime);
     }
 
@@ -215,7 +222,7 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
         Debug.Assert(channel < (byte)16);
         Debug.Assert(noteNum < (byte)128);
         Debug.Assert(velocity < (byte)128);
-        byte[] data = new byte[] { (byte)(channel | NOTE_OFF), noteNum, velocity };
+        byte[] data = new byte[] { (byte)(channel | MIDIHeaders.NOTE_OFF), noteNum, velocity };
         return SendMIDI(data, atTime);
     }
 
@@ -223,7 +230,7 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
         Debug.Assert(channel < (byte)16);
         Debug.Assert(num < (byte)128);
         Debug.Assert(val < (byte)128);
-        byte[] data = new byte[] { (byte)(channel | CONTROL_CHANGE), num, val };
+        byte[] data = new byte[] { (byte)(channel | MIDIHeaders.CONTROL_CHANGE), num, val };
         return SendMIDI(data, atTime);
     }
 
