@@ -1,5 +1,5 @@
 {
-    "name": "${PLUGIN_MANUFACTURER_NAME_ID}.${PLUGIN_NAME_ID}",
+    "name": "${PLUGIN_ASSEMBLY_NAME}",
     "references": [],
     "includePlatforms": [ "${PLUGIN_UNITY_PLATFORM_NAME}" ],
     "excludePlatforms": [],
