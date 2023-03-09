@@ -1,0 +1,9 @@
+{
+  "name": "com.${COMPANY_NAME_LOWER_ID}.${PRODUCT_NAME_LOWER_ID}",
+  "version": "0.0.1",
+  "displayName": "${PLUGIN_NAME}",
+  "unity": "2017.1",
+  "dependencies": { 
+      "com.cycling74.rnbotypes": "0.0.1"
+  }
+}
