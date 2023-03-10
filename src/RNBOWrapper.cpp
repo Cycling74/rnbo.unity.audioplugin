@@ -431,6 +431,34 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOLoadPrese
   });
 }
 
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOGetPresetSync(int32_t key, char ** payload)
+{
+  if (!payload) {
+    return false;
+  }
+
+  *payload = nullptr;
+
+	return with_instance(key, [payload](RNBOUnity::EffectData* effectdata) {
+      try {
+        auto preset = effectdata->inner.mCore.getPresetSync();
+        std::string s = RNBO::convertPresetToJSON(*preset);
+        *payload = new char[s.size() + 1];
+        std::strcpy(*payload, s.c_str());
+      } catch (std::exception& e) {
+        std::cerr << "error capturing preset " << e.what() << std::endl;
+      }
+  });
+}
+
+extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBOFreePreset(char * payload)
+{
+  if (payload) {
+    delete [] payload;
+  }
+}
+
+
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOPoll(int32_t key)
 {
 	//service the shared release queue

@@ -76,6 +76,12 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
     [DllImport("${PLUGIN_NAME}")]
     public static extern bool RNBOLoadPreset(int key, IntPtr payload);
 
+    [DllImport("${PLUGIN_NAME}")]
+    public static extern bool RNBOGetPresetSync(int key, out IntPtr payloadPtr);
+
+    [DllImport("${PLUGIN_NAME}")]
+    public static extern void RNBOFreePreset(IntPtr payloadPtr);
+
     private static PatcherDescription patcherDescription;
     public static PatcherDescription PatcherDescription {
         get {
@@ -295,6 +301,21 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
         IntPtr p = (IntPtr)Marshal.StringToHGlobalAnsi(payload);
         var r = RNBOLoadPreset(PluginKey, p);
         Marshal.FreeHGlobal(p);
+        return r;
+    }
+
+    //NOTE: might cause clicks
+    public bool GetPresetSync(out string payload) {
+        IntPtr p;
+
+        var r = RNBOGetPresetSync(PluginKey, out p);
+        if (r) {
+            payload = Marshal.PtrToStringAnsi(p);
+        } else {
+            payload = string.Empty;
+        }
+        RNBOFreePreset(p);
+
         return r;
     }
 
