@@ -42,3 +42,4 @@ all you need to install it as a package in Unity.
 ## TODO
 
 * Support additional platforms. Currently we only support MacOS, 64-bit Linux and 64-bit Windows.
+* Async Preset Capture
