@@ -8,6 +8,7 @@
 #include <readerwriterqueue/readerwriterqueue.h>
 
 #include <rnbo_description.h>
+#include <iostream>
 
 using RNBO::ParameterType;
 
@@ -372,6 +373,63 @@ extern "C" UNITY_AUDIODSP_EXPORT_API const char * AUDIO_CALLING_CONVENTION RNBOG
 	return RNBO::patcher_description.c_str();
 }
 
+extern "C" UNITY_AUDIODSP_EXPORT_API const char * AUDIO_CALLING_CONVENTION RNBOGetPresets()
+{
+	static std::mutex localmutex;
+  static std::string presetsString;
+
+  std::lock_guard guard(localmutex);
+
+  //since we can't easily parse arbitrary JSON in unity yet, we simply convert the preset payloads
+  //to strings
+  if (presetsString.empty()) {
+    nlohmann::json presets = nlohmann::json::array();
+    try {
+      nlohmann::json local = nlohmann::json::parse(RNBO::patcher_presets);
+
+      if (local.is_array()) {
+        for (auto p: local) {
+          if (!(p.is_object() && p.contains("name") && p.contains("preset"))) {
+            std::cerr << "unexpected preset entry format" << std::endl;
+            continue;
+          }
+
+          std::string name = p["name"].get<std::string>();
+          std::string payload = p["preset"].dump();
+
+          nlohmann::json entry = {
+              {"name", name},
+              {"preset", payload}
+          };
+
+          presets.push_back(entry);
+        }
+      }
+    } catch (std::exception& e) {
+      std::cerr << "exception processing presets " << e.what() << std::endl;
+    }
+
+    //add presets prefix so it is easier for Unity side to parse
+    nlohmann::json o = {
+      {"presets", presets}
+    };
+    presetsString = o.dump();
+  }
+
+	return presetsString.c_str();
+}
+
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOLoadPreset(int32_t key, const char * payload)
+{
+	return with_instance(key, [payload](RNBOUnity::EffectData* effectdata) {
+      try {
+        auto preset = RNBO::convertJSONToPreset(std::string(payload));
+        effectdata->inner.mCore.setPreset(std::move(preset));
+      } catch (std::exception& e) {
+        std::cerr << "error converting preset payload to RNBO preset " << e.what() << std::endl;
+      }
+  });
+}
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOPoll(int32_t key)
 {
