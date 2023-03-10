@@ -18,11 +18,18 @@ set(PLUGIN_MANUFACTURER_TLD "com" CACHE STRING "the Top Level Domain for your co
 
 set(CONAN_PROFILE "default" CACHE STRING "The profile to use for building conan deps, this is useful for cross compiling")
 
-set(RNBO_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../src/cpp/" CACHE FILEPATH "The path to the the RNBO c++ source directory")
-set(RNBO_CLASS_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../../../../codegen/xam/test/test.cpp" CACHE FILEPATH "The file that holds the generated RNBO class code")
-set(RNBO_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../../../../codegen/xam/test/description.json" CACHE FILEPATH "path to description.json")
+set(RNBO_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/export/rnbo/" CACHE FILEPATH "The path to the the RNBO c++ source directory")
+set(RNBO_EXPORT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/export/" CACHE FILEPATH "The directory that holds the generated RNBO exports")
+
+set(RNBO_CLASS_FILE_NAME "rnbo_source.cpp" CACHE STRING "the name of your rnbo class file")
+mark_as_advanced(RNBO_CLASS_FILE_NAME)
+
 set(RNBO_UNITY_INSTANCE_ACCESS_HACK ON CACHE BOOL "Do we provide the instance index hack as a parameter?")
 set(RNBO_UNITY_IS_SPATIALIZER OFF CACHE BOOL "Do we expose this plugin as a Spatializer")
+
+set(RNBO_CLASS_FILE ${RNBO_EXPORT_DIR}/${RNBO_CLASS_FILE_NAME})
+set(RNBO_DESCRIPTION_FILE ${RNBO_EXPORT_DIR}/description.json)
+set(RNBO_PRESETS_FILE ${RNBO_EXPORT_DIR}/presets.json)
 
 include(${RNBO_CPP_DIR}/cmake/RNBOConan.cmake)
 include(${RNBO_CPP_DIR}/cmake/CCache.cmake)
@@ -31,7 +38,7 @@ include(${RNBO_CPP_DIR}/cmake/MinGWSTDThreads.cmake)
 #generate description header
 include(${RNBO_CPP_DIR}/cmake/RNBODescriptionHeader.cmake)
 set(DESCRIPTION_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
-rnbo_write_description_header_if_exists(${RNBO_DESCRIPTION_FILE} ${DESCRIPTION_INCLUDE_DIR})
+rnbo_write_description_header_if_exists(${RNBO_DESCRIPTION_FILE} ${DESCRIPTION_INCLUDE_DIR} ${RNBO_PRESETS_FILE})
 
 #compute bundle id
 STRING(REGEX REPLACE "[^A-Za-z0-9]" "" PLUGIN_NAME_ID ${PLUGIN_NAME})

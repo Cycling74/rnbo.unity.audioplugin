@@ -16,12 +16,13 @@ adapter code you need to convert your RNBO C++ export into a plugin that you can
 
 ### Building
 
-We use cmake, here is a quick/dirty example.
+We use cmake, here is a quick/dirty example. Assuming you've exported your patcher to a subdirectory
+called `export` next to the `src` directory.
 
 ```sh
 mkdir build
 cd build
-cmake .. -DRNBO_CPP_DIR=/path/to/rnbo/cpp -DPLUGIN_NAME="Foo Bar" -DRNBO_CLASS_FILE=/path/to/rnbo_source.cpp -DRNBO_DESCRIPTION_FILE=/source/to/description.json
+cmake .. -DPLUGIN_NAME="Foo Bar"
 cmake --build .
 ```
 
