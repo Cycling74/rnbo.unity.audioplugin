@@ -29,6 +29,9 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
     private static extern IntPtr RNBOGetDescription();
 
     [DllImport("${PLUGIN_NAME}")]
+    private static extern IntPtr RNBOGetPresets();
+
+    [DllImport("${PLUGIN_NAME}")]
     private static extern bool RNBOResolveTag(int key, MessageTag tag, out IntPtr tagStr);
 
     [DllImport("${PLUGIN_NAME}")]
@@ -69,6 +72,9 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
 
     [DllImport("${PLUGIN_NAME}")]
     public static extern bool RNBOReleaseDataRef(int key, IntPtr id);
+
+    [DllImport("${PLUGIN_NAME}")]
+    public static extern bool RNBOLoadPreset(int key, IntPtr payload);
 
     private static PatcherDescription patcherDescription;
     public static PatcherDescription PatcherDescription {
@@ -118,6 +124,17 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
                 dataRefs = PatcherDescription.externalDataRefs.ToArray();
             }
             return dataRefs;
+        }
+    }
+
+    private static PresetEntry[] presets;
+    public static PresetEntry[] Presets {
+        get {
+            if (presets == null) {
+                string s = Marshal.PtrToStringAnsi(RNBOGetPresets());
+                presets = JsonUtility.FromJson<PresetList>(s)!.presets.ToArray();
+            }
+            return presets;
         }
     }
 
@@ -271,6 +288,13 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
         IntPtr idPtr = (IntPtr)Marshal.StringToHGlobalAnsi(id);
         var r = RNBOReleaseDataRef(PluginKey, idPtr);
         Marshal.FreeHGlobal(idPtr);
+        return r;
+    }
+
+    public bool LoadPreset(string payload) {
+        IntPtr p = (IntPtr)Marshal.StringToHGlobalAnsi(payload);
+        var r = RNBOLoadPreset(PluginKey, p);
+        Marshal.FreeHGlobal(p);
         return r;
     }
 

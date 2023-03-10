@@ -107,4 +107,16 @@ namespace Cycling74.RNBOTypes {
         public Float[] Values { get; private set; }
         public MillisecondTime Time { get; private set; }
     }
+
+    [System.Serializable]
+    public class PresetEntry {
+        public string name;
+        //is actually json but encoded as a string so we don't have to parse it
+        public string preset;
+    }
+
+    [System.Serializable]
+    public class PresetList {
+        public List<PresetEntry> presets;
+    }
 }
