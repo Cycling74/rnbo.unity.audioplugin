@@ -7,20 +7,25 @@ using UnityEngine;
 using Cycling74.RNBOTypes;
 
 //TODO how to share these aliases?
+//https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/built-in-types
 using Float = System.Double;
 using MillisecondTime = System.Double;
 using ParameterValue = System.Double;
 using ParameterIndex = System.UIntPtr;
 using MessageTag = System.UInt32;
 
-//https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/built-in-types
-
-public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
+public class ${PLUGIN_NAME_ID}Handle {
     public event EventHandler<ParameterChangedEventArgs> ParameterChangedEvent;
     public event EventHandler<MessageEventArgs> MessageEvent;
 
     [UnmanagedFunctionPointer(CallingConvention.StdCall)]
     private delegate void ReleaseDataRefDelegate(UIntPtr id);
+
+    [DllImport("${PLUGIN_NAME}")]
+    private static extern int RNBOInstanceCreate();
+
+    [DllImport("${PLUGIN_NAME}")]
+    private static extern void RNBOInstanceDestroy(int key);
 
     [DllImport("${PLUGIN_NAME}")]
     private static extern MessageTag RNBOTag(IntPtr tagString);
@@ -33,6 +38,9 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
 
     [DllImport("${PLUGIN_NAME}")]
     private static extern bool RNBOResolveTag(int key, MessageTag tag, out IntPtr tagStr);
+
+    [DllImport("${PLUGIN_NAME}")]
+    private static extern bool RNBOInstanceMapped(int key);
 
     [DllImport("${PLUGIN_NAME}")]
     private static extern bool RNBOPoll(int key);
@@ -50,37 +58,38 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
     private static extern bool RNBOGetParamValueNormalized(int key, ParameterIndex index, out ParameterValue value);
 
     [DllImport("${PLUGIN_NAME}", CallingConvention = CallingConvention.StdCall)]
-    public static extern bool RNBORegisterParameterEventCallback(int key, IntPtr callback);
+    private static extern bool RNBORegisterParameterEventCallback(int key, IntPtr callback);
 
     [DllImport("${PLUGIN_NAME}", CallingConvention = CallingConvention.StdCall)]
-    public static extern bool RNBORegisterMessageEventCallback(int key, IntPtr callback);
+    private static extern bool RNBORegisterMessageEventCallback(int key, IntPtr callback);
 
     [DllImport("${PLUGIN_NAME}")]
-    public static extern bool RNBOSendMessageBang(int key, MessageTag tag, MillisecondTime atTime);
+    private static extern bool RNBOSendMessageBang(int key, MessageTag tag, MillisecondTime atTime);
 
     [DllImport("${PLUGIN_NAME}")]
-    public static extern bool RNBOSendMessageNumber(int key, MessageTag tag, Float value, MillisecondTime atTime);
+    private static extern bool RNBOSendMessageNumber(int key, MessageTag tag, Float value, MillisecondTime atTime);
 
     [DllImport("${PLUGIN_NAME}")]
-    public static extern bool RNBOSendMessageList(int key, MessageTag tag, [MarshalAs(UnmanagedType.LPArray)] Float[] list, IntPtr listlen, MillisecondTime atTime);
+    private static extern bool RNBOSendMessageList(int key, MessageTag tag, [MarshalAs(UnmanagedType.LPArray)] Float[] list, IntPtr listlen, MillisecondTime atTime);
 
     [DllImport("${PLUGIN_NAME}")]
-    public static extern bool RNBOSendMIDI(int key, [MarshalAs(UnmanagedType.LPArray)] byte[] data, IntPtr dataLen, MillisecondTime atTime);
+    private static extern bool RNBOSendMIDI(int key, [MarshalAs(UnmanagedType.LPArray)] byte[] data, IntPtr dataLen, MillisecondTime atTime);
 
     [DllImport("${PLUGIN_NAME}")]
-    public static extern bool RNBOCopyLoadDataRef(int key, IntPtr id, [MarshalAs(UnmanagedType.LPArray)] System.Single[] data, IntPtr datalen, IntPtr channels, IntPtr samplerate);
+    private static extern bool RNBOCopyLoadDataRef(int key, IntPtr id, [MarshalAs(UnmanagedType.LPArray)] System.Single[] data, IntPtr datalen, IntPtr channels, IntPtr samplerate);
 
     [DllImport("${PLUGIN_NAME}")]
-    public static extern bool RNBOReleaseDataRef(int key, IntPtr id);
+    private static extern bool RNBOReleaseDataRef(int key, IntPtr id);
 
     [DllImport("${PLUGIN_NAME}")]
-    public static extern bool RNBOLoadPreset(int key, IntPtr payload);
+    private static extern bool RNBOLoadPreset(int key, IntPtr payload);
 
     [DllImport("${PLUGIN_NAME}")]
-    public static extern bool RNBOGetPresetSync(int key, out IntPtr payloadPtr);
+    private static extern bool RNBOGetPresetSync(int key, out IntPtr payloadPtr);
 
     [DllImport("${PLUGIN_NAME}")]
-    public static extern void RNBOFreePreset(IntPtr payloadPtr);
+    private static extern void RNBOFreePreset(IntPtr payloadPtr);
+
 
     private static PatcherDescription patcherDescription;
     public static PatcherDescription PatcherDescription {
@@ -151,32 +160,28 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
         return r;
     }
 
-    private static Dictionary<int, GameObject> instances = new Dictionary<int, GameObject>();
-    public static ${PLUGIN_NAME_ID}Helper FindById(int key) {
-        lock (instances) {
-            GameObject go;
-            if (!instances.TryGetValue(key, out go)) {
-                go = new GameObject(String.Format("${PLUGIN_NAME_ID}HelperObject{0}", key));
-                DontDestroyOnLoad(go);
-                instances.Add(key, go);
-
-                ${PLUGIN_NAME_ID}Helper helper = go.AddComponent<${PLUGIN_NAME_ID}Helper>();
-                helper.PluginKey = key;
-                return helper;
-            }
-            return go.GetComponent<${PLUGIN_NAME_ID}Helper>();
-        }
+    public ${PLUGIN_NAME_ID}Handle() {
+        PluginKey = RNBOInstanceCreate();
+        RegisterIfNeeded();
+    }
+    
+    internal ${PLUGIN_NAME_ID}Handle(int key) {
+        PluginKey = key;
     }
 
+    private bool registered = false;
+    private void RegisterIfNeeded() {
+        if (!registered) {
+            registered = RegisterParameterEventDelegate() && RegisterMessageEventDelegate();
+        }
+    }
+    
     public int PluginKey {
         get; internal set;
     }
 
-    private bool registered = false;
-    void Update() {
-        if (!registered) {
-            registered = RegisterParameterEventDelegate() && RegisterMessageEventDelegate();
-        }
+    public void Update() {
+        RegisterIfNeeded();
         RNBOPoll(PluginKey);
     }
 
@@ -337,7 +342,6 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
         return r;
     }
 
-
     [UnmanagedFunctionPointer(CallingConvention.StdCall)]
     private delegate void InternalMessageEventDelegate(MessageTag tag, IntPtr messageType, IntPtr valuesPtr, IntPtr valueCount, MillisecondTime time);
 
@@ -364,5 +368,36 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
         var r = RNBORegisterMessageEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(d));
         registeredMessageEventDelegate = d;
         return r;
+    }
+}
+
+public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
+    private static Dictionary<int, GameObject> instances = new Dictionary<int, GameObject>();
+    public static ${PLUGIN_NAME_ID}Helper FindById(int key) {
+        lock (instances) {
+            GameObject go;
+            if (!instances.TryGetValue(key, out go)) {
+                go = new GameObject(String.Format("${PLUGIN_NAME_ID}HelperObject{0}", key));
+                DontDestroyOnLoad(go);
+                instances.Add(key, go);
+
+                ${PLUGIN_NAME_ID}Helper helper = go.AddComponent<${PLUGIN_NAME_ID}Helper>();
+                helper.Handle = new ${PLUGIN_NAME_ID}Handle(key);
+                return helper;
+            }
+            return go.GetComponent<${PLUGIN_NAME_ID}Helper>();
+        }
+    }
+
+    public ${PLUGIN_NAME_ID}Handle Handle {
+        get; internal set;
+    }
+
+    public int PluginKey {
+        get => Handle.PluginKey;
+    }
+
+    void Update() {
+        Handle.Update();
     }
 }
