@@ -421,7 +421,7 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
         }
     }
 
-    public ${PLUGIN_NAME_ID}Handle Handle {
+    public ${PLUGIN_NAME_ID}Handle Plugin {
         get; internal set;
     }
 
