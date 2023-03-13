@@ -368,19 +368,22 @@ extern "C" UNITY_AUDIODSP_EXPORT_API void * AUDIO_CALLING_CONVENTION RNBOInstanc
 {
   std::unique_lock wlock(RNBOUnity::instances_mutex);
 
-  //TODO, more keys
+  //TODO, better key lookup
   int32_t key = -1;
+  while (RNBOUnity::instances.count(key) != 0 && key < 0) {
+    key -= 1;
+  }
 
-  if (RNBOUnity::instances.count(key) == 0) {
-    RNBOUnity::InnerData * i = new RNBOUnity::InnerData();
-    i->mInstanceKey = key;
-    RNBOUnity::instances.insert({ key, i });
-    *outkey = key;
-    return i;
-  } else {
-    //XXX ERROR!
+  //XXX ERROR
+  if (key >= 0) {
     return nullptr;
   }
+
+  RNBOUnity::InnerData * i = new RNBOUnity::InnerData();
+  i->mInstanceKey = key;
+  RNBOUnity::instances.insert({ key, i });
+  *outkey = key;
+  return i;
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBOInstanceDestroy(RNBOUnity::InnerData * inst)
