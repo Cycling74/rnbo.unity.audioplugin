@@ -364,7 +364,7 @@ namespace {
 
 #if RNBO_UNITY_INSTANCE_ACCESS_HACK == 1
 
-extern "C" UNITY_AUDIODSP_EXPORT_API int32_t AUDIO_CALLING_CONVENTION RNBOInstanceCreate()
+extern "C" UNITY_AUDIODSP_EXPORT_API void * AUDIO_CALLING_CONVENTION RNBOInstanceCreate(int32_t* outkey)
 {
   std::unique_lock wlock(RNBOUnity::instances_mutex);
 
@@ -375,28 +375,32 @@ extern "C" UNITY_AUDIODSP_EXPORT_API int32_t AUDIO_CALLING_CONVENTION RNBOInstan
     RNBOUnity::InnerData * i = new RNBOUnity::InnerData();
     i->mInstanceKey = key;
     RNBOUnity::instances.insert({ key, i });
+    *outkey = key;
+    return i;
   } else {
     //XXX ERROR!
+    return nullptr;
   }
-
-  return key;
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBOInstanceDestory(int32_t key)
+extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBOInstanceDestroy(RNBOUnity::InnerData * inst)
 {
-  if (key >= 0) {
-    //ERROR
-    return;
-  }
+  auto key = inst->mInstanceKey;
 
   std::unique_lock wlock(RNBOUnity::instances_mutex);
   auto it = RNBOUnity::instances.find(key);
   if (it == RNBOUnity::instances.end()) {
     //ERROR
   } else {
-    delete it->second;
+    delete inst;
     RNBOUnity::instances.erase(key);
   }
+}
+
+extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBOProcess(RNBOUnity::InnerData * inner, float * buffer, int32_t channels, int32_t nframes, int32_t samplerate)
+{
+  inner->mCore.prepareToProcess(samplerate, nframes);
+  inner->mCore.process(buffer, channels, buffer, channels, nframes, nullptr, nullptr);
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOInstanceMapped(int32_t key)

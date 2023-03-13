@@ -22,10 +22,13 @@ public class ${PLUGIN_NAME_ID}Handle {
     private delegate void ReleaseDataRefDelegate(UIntPtr id);
 
     [DllImport("${PLUGIN_NAME}")]
-    private static extern int RNBOInstanceCreate();
+    private static extern IntPtr RNBOInstanceCreate(out int key);
 
     [DllImport("${PLUGIN_NAME}")]
-    private static extern void RNBOInstanceDestroy(int key);
+    private static extern void RNBOInstanceDestroy(IntPtr instance);
+
+    [DllImport("${PLUGIN_NAME}")]
+    private static extern void RNBOProcess(IntPtr instance, float[] data, int channels, int nframes, int samplerate);
 
     [DllImport("${PLUGIN_NAME}")]
     private static extern MessageTag RNBOTag(IntPtr tagString);
@@ -160,13 +163,34 @@ public class ${PLUGIN_NAME_ID}Handle {
         return r;
     }
 
+    //does this handle own the instance
+    private IntPtr ownedInstance = (IntPtr)0;
+    private int sampleRate;
+    
     public ${PLUGIN_NAME_ID}Handle() {
-        PluginKey = RNBOInstanceCreate();
+        int key;
+        ownedInstance = RNBOInstanceCreate(out key);
+        PluginKey = key;
+
+        /*
+         * XXX prepare to process?
+        int bufferSize;
+        int numBuffers;
+        AudioSettings.GetDSPBufferSize(out bufferSize, out numBuffers);
+        */
+
+        sampleRate = AudioSettings.outputSampleRate;
         RegisterIfNeeded();
     }
     
     internal ${PLUGIN_NAME_ID}Handle(int key) {
         PluginKey = key;
+    }
+    
+    ~${PLUGIN_NAME_ID}Handle() {
+        if (ownedInstance != (IntPtr)0) {
+            RNBOInstanceDestroy(ownedInstance);
+        }
     }
 
     private bool registered = false;
@@ -183,6 +207,14 @@ public class ${PLUGIN_NAME_ID}Handle {
     public void Update() {
         RegisterIfNeeded();
         RNBOPoll(PluginKey);
+    }
+
+    public void Process(float[] data, int channels) {
+        if (ownedInstance == (IntPtr)0) {
+            throw new InvalidOperationException("Process can only be called on owned instances");
+        }
+
+        RNBOProcess(ownedInstance, data, channels, data.Length / channels, sampleRate);
     }
 
     public bool ResolveTag(MessageTag tag, out string tagStr) {
