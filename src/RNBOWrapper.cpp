@@ -363,6 +363,42 @@ namespace {
 //custom entrypoints
 
 #if RNBO_UNITY_INSTANCE_ACCESS_HACK == 1
+
+extern "C" UNITY_AUDIODSP_EXPORT_API int32_t AUDIO_CALLING_CONVENTION RNBOInstanceCreate()
+{
+  std::unique_lock wlock(RNBOUnity::instances_mutex);
+
+  //TODO, more keys
+  int32_t key = -1;
+
+  if (RNBOUnity::instances.count(key) == 0) {
+    RNBOUnity::InnerData * i = new RNBOUnity::InnerData();
+    i->mInstanceKey = key;
+    RNBOUnity::instances.insert({ key, i });
+  } else {
+    //XXX ERROR!
+  }
+
+  return key;
+}
+
+extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBOInstanceDestory(int32_t key)
+{
+  if (key >= 0) {
+    //ERROR
+    return;
+  }
+
+  std::unique_lock wlock(RNBOUnity::instances_mutex);
+  auto it = RNBOUnity::instances.find(key);
+  if (it == RNBOUnity::instances.end()) {
+    //ERROR
+  } else {
+    delete it->second;
+    RNBOUnity::instances.erase(key);
+  }
+}
+
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOInstanceMapped(int32_t key)
 {
 	return with_instance(key, [](RNBOUnity::InnerData*) { /*do nothing*/ });
