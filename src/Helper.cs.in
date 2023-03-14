@@ -165,6 +165,8 @@ public class ${PLUGIN_NAME_ID}Handle {
 
     //does this handle own the instance
     private IntPtr ownedInstance = (IntPtr)0;
+    private bool OwnsInstance => ownedInstance != (IntPtr)0;
+
     private int sampleRate;
     
     public ${PLUGIN_NAME_ID}Handle() {
@@ -188,7 +190,7 @@ public class ${PLUGIN_NAME_ID}Handle {
     }
     
     ~${PLUGIN_NAME_ID}Handle() {
-        if (ownedInstance != (IntPtr)0) {
+        if (OwnsInstance) {
             RNBOInstanceDestroy(ownedInstance);
         }
     }
@@ -203,14 +205,14 @@ public class ${PLUGIN_NAME_ID}Handle {
     public int PluginKey {
         get; internal set;
     }
-
+    
     public void Update() {
         RegisterIfNeeded();
         RNBOPoll(PluginKey);
     }
 
     public void Process(float[] data, int channels) {
-        if (ownedInstance == (IntPtr)0) {
+        if (!OwnsInstance) {
             throw new InvalidOperationException("Process can only be called on owned instances");
         }
 
@@ -426,10 +428,11 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
     }
 
     public int PluginKey {
-        get => Plugin.PluginKey;
+        get => Plugin?.PluginKey ?? 0;
     }
 
-    void Update() {
-        Plugin.Update();
+    public void Update() {
+        if (Plugin != null)
+            Plugin.Update();
     }
 }
