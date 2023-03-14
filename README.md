@@ -17,7 +17,7 @@ adapter code you need to convert your RNBO C++ export into a plugin that you can
 ### Building
 
 We use cmake, here is a quick/dirty example. Assuming you've exported your patcher to a subdirectory
-called `export` next to the `src` directory.
+called `export` next to the `src` directory, and your export is called `rnbo_source.cpp`.
 
 ```sh
 mkdir build
@@ -28,6 +28,10 @@ cmake --build .
 
 After that you should see a folder in your build directory called **Foo Bar**. This should contain
 all you need to install it as a package in Unity.
+
+### Installation
+
+You should use "Add package from disk..." via Unity's Package Manager to install both the **RNBOTypes** and **FOO Bar** packages.
 
 ## Resources
 
