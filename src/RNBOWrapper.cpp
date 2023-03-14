@@ -203,7 +203,7 @@ namespace RNBOUnity
 
 #if RNBO_UNITY_INSTANCE_ACCESS_HACK == 1
 	std::shared_mutex instances_mutex;
-	std::unordered_map<int32_t, EffectData *> instances;
+	std::unordered_map<int32_t, InnerData *> instances;
 #endif
 
 	UNITY_AUDIODSP_RESULT UNITY_AUDIODSP_CALLBACK CreateCallback(UnityAudioEffectState* state) {
@@ -258,9 +258,9 @@ namespace RNBOUnity
 				//test for collision
 				auto it = instances.find(key);
 				if (it != instances.end()) {
-					it->second->inner.mInstanceKey = invalidKey;
+					it->second->mInstanceKey = invalidKey;
 				}
-				instances[key] = effectdata;
+				instances[key] = &effectdata->inner;
 			} else if (effectdata->inner.mInstanceKey != invalidKey) {
 				instances.erase(effectdata->inner.mInstanceKey);
 			}
@@ -348,7 +348,7 @@ namespace {
 		datarefReleaseQueue.try_enqueue(d);
 	}
 
-	bool with_instance(int32_t key, std::function<void(RNBOUnity::EffectData *)> func) {
+	bool with_instance(int32_t key, std::function<void(RNBOUnity::InnerData *)> func) {
 		std::shared_lock rlock(RNBOUnity::instances_mutex);
 		auto it = RNBOUnity::instances.find(key);
 		if (it != RNBOUnity::instances.end()) {
@@ -363,9 +363,52 @@ namespace {
 //custom entrypoints
 
 #if RNBO_UNITY_INSTANCE_ACCESS_HACK == 1
+
+extern "C" UNITY_AUDIODSP_EXPORT_API void * AUDIO_CALLING_CONVENTION RNBOInstanceCreate(int32_t* outkey)
+{
+  std::unique_lock wlock(RNBOUnity::instances_mutex);
+
+  //TODO, better key lookup
+  int32_t key = -1;
+  while (RNBOUnity::instances.count(key) != 0 && key < 0) {
+    key -= 1;
+  }
+
+  //XXX ERROR
+  if (key >= 0) {
+    return nullptr;
+  }
+
+  RNBOUnity::InnerData * i = new RNBOUnity::InnerData();
+  i->mInstanceKey = key;
+  RNBOUnity::instances.insert({ key, i });
+  *outkey = key;
+  return i;
+}
+
+extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBOInstanceDestroy(RNBOUnity::InnerData * inst)
+{
+  auto key = inst->mInstanceKey;
+
+  std::unique_lock wlock(RNBOUnity::instances_mutex);
+  auto it = RNBOUnity::instances.find(key);
+  if (it == RNBOUnity::instances.end()) {
+    //ERROR
+  } else {
+    delete inst;
+    RNBOUnity::instances.erase(key);
+  }
+}
+
+extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBOProcess(RNBOUnity::InnerData * inner, float * buffer, int32_t channels, int32_t nframes, int32_t samplerate)
+{
+  inner->mCore.prepareToProcess(samplerate, nframes);
+  inner->mCore.process(buffer, channels, buffer, channels, nframes, nullptr, nullptr);
+}
+
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOInstanceMapped(int32_t key)
 {
-	return with_instance(key, [](RNBOUnity::EffectData*) { /*do nothing*/ });
+	return with_instance(key, [](RNBOUnity::InnerData*) { /*do nothing*/ });
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API const char * AUDIO_CALLING_CONVENTION RNBOGetDescription()
@@ -421,10 +464,10 @@ extern "C" UNITY_AUDIODSP_EXPORT_API const char * AUDIO_CALLING_CONVENTION RNBOG
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOLoadPreset(int32_t key, const char * payload)
 {
-	return with_instance(key, [payload](RNBOUnity::EffectData* effectdata) {
+	return with_instance(key, [payload](RNBOUnity::InnerData* inner) {
       try {
         auto preset = RNBO::convertJSONToPreset(std::string(payload));
-        effectdata->inner.mCore.setPreset(std::move(preset));
+        inner->mCore.setPreset(std::move(preset));
       } catch (std::exception& e) {
         std::cerr << "error converting preset payload to RNBO preset " << e.what() << std::endl;
       }
@@ -439,9 +482,9 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOGetPreset
 
   *payload = nullptr;
 
-	return with_instance(key, [payload](RNBOUnity::EffectData* effectdata) {
+	return with_instance(key, [payload](RNBOUnity::InnerData * inner) {
       try {
-        auto preset = effectdata->inner.mCore.getPresetSync();
+        auto preset = inner->mCore.getPresetSync();
         std::string s = RNBO::convertPresetToJSON(*preset);
         *payload = new char[s.size() + 1];
         std::strcpy(*payload, s.c_str());
@@ -474,8 +517,8 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOPoll(int3
 		}
 	}
 
-	return with_instance(key, [](RNBOUnity::EffectData* effectdata) {
-			effectdata->inner.mEventHandler.poll();
+	return with_instance(key, [](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.poll();
 	});
 }
 
@@ -486,105 +529,105 @@ extern "C" UNITY_AUDIODSP_EXPORT_API RNBO::MessageTag AUDIO_CALLING_CONVENTION R
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOResolveTag(int32_t key, RNBO::MessageTag tag, const char** tagChar)
 {
-	return with_instance(key, [tag, tagChar](RNBOUnity::EffectData* effectdata) {
+	return with_instance(key, [tag, tagChar](RNBOUnity::InnerData * inner) {
 			if (tagChar) {
-				*tagChar = effectdata->inner.mCore.resolveTag(tag);
+				*tagChar = inner->mCore.resolveTag(tag);
 			}
 	});
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOSetParamValue(int32_t key, RNBO::ParameterIndex index, RNBO::ParameterValue value, RNBO::MillisecondTime attime)
 {
-	return with_instance(key, [index, value, attime](RNBOUnity::EffectData* effectdata) {
-			effectdata->inner.mCore.setParameterValue(index, value, attime);
+	return with_instance(key, [index, value, attime](RNBOUnity::InnerData * inner) {
+			inner->mCore.setParameterValue(index, value, attime);
 	});
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOGetParamValue(int32_t key, RNBO::ParameterIndex index, RNBO::ParameterValue * valueOut)
 {
-	return with_instance(key, [index, valueOut](RNBOUnity::EffectData* effectdata) {
+	return with_instance(key, [index, valueOut](RNBOUnity::InnerData * inner) {
 			if (valueOut != nullptr) {
-				*valueOut = effectdata->inner.mCore.getParameterValue(index);
+				*valueOut = inner->mCore.getParameterValue(index);
 			}
 	});
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOSetParamValueNormalized(int32_t key, RNBO::ParameterIndex index, RNBO::ParameterValue value, RNBO::MillisecondTime attime)
 {
-	return with_instance(key, [index, value, attime](RNBOUnity::EffectData* effectdata) {
-			effectdata->inner.mCore.setParameterValueNormalized(index, value, attime);
+	return with_instance(key, [index, value, attime](RNBOUnity::InnerData * inner) {
+			inner->mCore.setParameterValueNormalized(index, value, attime);
 	});
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOGetParamValueNormalized(int32_t key, RNBO::ParameterIndex index, RNBO::ParameterValue * valueOut)
 {
-	return with_instance(key, [index, valueOut](RNBOUnity::EffectData* effectdata) {
+	return with_instance(key, [index, valueOut](RNBOUnity::InnerData * inner) {
 			if (valueOut != nullptr) {
-				*valueOut = effectdata->inner.mCore.convertToNormalizedParameterValue(index, effectdata->inner.mCore.getParameterValue(index));
+				*valueOut = inner->mCore.convertToNormalizedParameterValue(index, inner->mCore.getParameterValue(index));
 			}
 	});
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOSendMessageNumber(int32_t key, RNBO::MessageTag tag, RNBO::number v, RNBO::MillisecondTime attime)
 {
-	return with_instance(key, [&tag, v, attime](RNBOUnity::EffectData* effectdata) {
+	return with_instance(key, [&tag, v, attime](RNBOUnity::InnerData * inner) {
 			RNBO::MessageEvent event(tag, attime, v);
-			effectdata->inner.mCore.scheduleEvent(event);
+			inner->mCore.scheduleEvent(event);
 	});
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOSendMessageBang(int32_t key, RNBO::MessageTag tag, RNBO::MillisecondTime attime)
 {
-	return with_instance(key, [tag, attime](RNBOUnity::EffectData* effectdata) {
+	return with_instance(key, [tag, attime](RNBOUnity::InnerData * inner) {
 			RNBO::MessageEvent event(tag, attime);
-			effectdata->inner.mCore.scheduleEvent(event);
+			inner->mCore.scheduleEvent(event);
 	});
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOSendMessageList(int32_t key, RNBO::MessageTag tag, const RNBO::number* buffer, size_t bufferlen, RNBO::MillisecondTime attime)
 {
-	return with_instance(key, [tag, buffer, bufferlen, attime](RNBOUnity::EffectData* effectdata) {
+	return with_instance(key, [tag, buffer, bufferlen, attime](RNBOUnity::InnerData * inner) {
 		auto l = std::make_unique<RNBO::list>();
 		for (auto i = 0; i < bufferlen; i++) {
 			l->push(buffer[i]);
 		}
 		RNBO::MessageEvent event(tag, attime, std::move(l));
-		effectdata->inner.mCore.scheduleEvent(event);
+		inner->mCore.scheduleEvent(event);
 	});
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOSendMIDI(int32_t key, const uint8_t* bytes, int len, RNBO::MillisecondTime attime)
 {
-	return with_instance(key, [bytes, len, attime](RNBOUnity::EffectData* effectdata) {
+	return with_instance(key, [bytes, len, attime](RNBOUnity::InnerData * inner) {
 			RNBO::MidiEvent event(attime, 0, bytes, len);
-			effectdata->inner.mCore.scheduleEvent(event);
+			inner->mCore.scheduleEvent(event);
 	});
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOCopyLoadDataRef(int32_t key, const char * id, const float * data, size_t datalen, size_t channels, size_t samplerate)
 {
-	return with_instance(key, [id, data, datalen, channels, samplerate](RNBOUnity::EffectData* effectdata) {
+	return with_instance(key, [id, data, datalen, channels, samplerate](RNBOUnity::InnerData * inner) {
 			RNBO::Float32AudioBuffer bufferType(channels, static_cast<double>(samplerate));
 
 			//we need to create our own copy as RNBO might write into the data AND it also might realloc
 			float * d = new float[datalen];
 			size_t bytes = sizeof(float) * datalen;
 			std::memcpy(d, data, bytes);
-			effectdata->inner.mCore.setExternalData(id, reinterpret_cast<char *>(d), bytes, bufferType, DataRefRelease);
+			inner->mCore.setExternalData(id, reinterpret_cast<char *>(d), bytes, bufferType, DataRefRelease);
 	});
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOReleaseDataRef(int32_t key, const char * id)
 {
-	return with_instance(key, [id](RNBOUnity::EffectData* effectdata) {
-			effectdata->inner.mCore.releaseExternalData(id);
+	return with_instance(key, [id](RNBOUnity::InnerData * inner) {
+			inner->mCore.releaseExternalData(id);
 	});
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterParameterEventCallback(int32_t key, CParameterEventCallback callback)
 {
-	return with_instance(key, [callback](RNBOUnity::EffectData* effectdata) {
-			effectdata->inner.mEventHandler.setParameterEventCallback([callback](RNBO::ParameterEvent event) {
+	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setParameterEventCallback([callback](RNBO::ParameterEvent event) {
 					if (callback) {
 						callback(event.getIndex(), event.getValue(), event.getTime());
 					}
@@ -594,8 +637,8 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterP
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterMessageEventCallback(int32_t key, CMessageEventCallback callback)
 {
-	return with_instance(key, [callback](RNBOUnity::EffectData* effectdata) {
-			effectdata->inner.mEventHandler.setMessageEventCallback([callback](RNBO::MessageEvent event) {
+	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setMessageEventCallback([callback](RNBO::MessageEvent event) {
 					if (callback && event.getObjectId() == 0) {
 						if (event.getType() == RNBO::MessageEvent::Type::List) {
 							//hold shared pointer
