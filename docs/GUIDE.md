@@ -2,7 +2,7 @@
 
 ## Getting started
 
-Over in your Unity project, in `/Assets`, create a `/Plugins` folder and drop in your `FooBar.bundle` from the `FooBar` package. In the Inspector for the Plugin, check "Load on Startup" and then "Apply."
+In the Inspector for each Plugin, check "Load on Startup" and then "Apply."
 
 ## Where you can load your RNBO Device
 
