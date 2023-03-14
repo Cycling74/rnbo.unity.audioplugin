@@ -414,7 +414,7 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
                 instances.Add(key, go);
 
                 ${PLUGIN_NAME_ID}Helper helper = go.AddComponent<${PLUGIN_NAME_ID}Helper>();
-                helper.Handle = new ${PLUGIN_NAME_ID}Handle(key);
+                helper.Plugin = new ${PLUGIN_NAME_ID}Handle(key);
                 return helper;
             }
             return go.GetComponent<${PLUGIN_NAME_ID}Helper>();
@@ -426,10 +426,10 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
     }
 
     public int PluginKey {
-        get => Handle.PluginKey;
+        get => Plugin.PluginKey;
     }
 
     void Update() {
-        Handle.Update();
+        Plugin.Update();
     }
 }
