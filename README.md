@@ -31,7 +31,7 @@ all you need to install it as a package in Unity.
 
 ### Installation
 
-You should use "Add package from disk..." via Unity's Package Manager to install both the **RNBOTypes** and **FOO Bar** packages.
+You should use "Add package from disk..." via Unity's Package Manager to install both the **RNBOTypes** and **Foo Bar** packages.
 
 ## Resources
 
