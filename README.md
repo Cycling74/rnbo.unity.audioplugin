@@ -3,6 +3,8 @@
 This is experimental software, use at your own risk.
 Here we implement a Native Audio Plugin for Unity as well as a helper object for working around some of the limitations of that API.
 
+After following the steps below, learn more about working with [RNBO in Unity](docs/GUIDE.md).
+
 ## Project organization
 
 There are 2 pieces to this project.
