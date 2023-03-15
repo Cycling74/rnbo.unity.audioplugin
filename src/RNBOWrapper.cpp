@@ -32,8 +32,8 @@ namespace RNBOUnity
 
 extern "C" UNITY_AUDIODSP_EXPORT_API int AUDIO_CALLING_CONVENTION UnityGetAudioEffectDefinitions(UnityAudioEffectDefinition*** definitionptr)
 {
-    static UnityAudioEffectDefinition definition;
-    static UnityAudioEffectDefinition* definitionp = &definition;
+		static UnityAudioEffectDefinition definition;
+		static UnityAudioEffectDefinition* definitionp = &definition;
 		UInt32 flags = 0;
 
 #if PLUGIN_IS_SPATIALIZER==1
@@ -54,7 +54,7 @@ extern "C" UNITY_AUDIODSP_EXPORT_API int AUDIO_CALLING_CONVENTION UnityGetAudioE
 				);
 
 		*definitionptr = &definitionp;
-    return 1;
+		return 1;
 }
 
 namespace RNBOUnity
@@ -239,6 +239,10 @@ namespace RNBOUnity
 			return UNITY_AUDIODSP_OK;
 		}
 
+		const RNBO::MillisecondTime stoms = 1000.0;
+		RNBO::MillisecondTime ms = stoms * (static_cast<RNBO::MillisecondTime>(state->currdsptick) / static_cast<RNBO::MillisecondTime>(state->samplerate));
+
+		effectdata->inner.mCore.setCurrentTime(ms);
 		effectdata->inner.mCore.process(inbuffer, inchannels, outbuffer, outchannels, length, nullptr, nullptr);
 
 		return UNITY_AUDIODSP_OK;
@@ -366,44 +370,45 @@ namespace {
 
 extern "C" UNITY_AUDIODSP_EXPORT_API void * AUDIO_CALLING_CONVENTION RNBOInstanceCreate(int32_t* outkey)
 {
-  std::unique_lock wlock(RNBOUnity::instances_mutex);
+	std::unique_lock wlock(RNBOUnity::instances_mutex);
 
-  //TODO, better key lookup
-  int32_t key = -1;
-  while (RNBOUnity::instances.count(key) != 0 && key < 0) {
-    key -= 1;
-  }
+	//TODO, better key lookup
+	int32_t key = -1;
+	while (RNBOUnity::instances.count(key) != 0 && key < 0) {
+		key -= 1;
+	}
 
-  //XXX ERROR
-  if (key >= 0) {
-    return nullptr;
-  }
+	//XXX ERROR
+	if (key >= 0) {
+		return nullptr;
+	}
 
-  RNBOUnity::InnerData * i = new RNBOUnity::InnerData();
-  i->mInstanceKey = key;
-  RNBOUnity::instances.insert({ key, i });
-  *outkey = key;
-  return i;
+	RNBOUnity::InnerData * i = new RNBOUnity::InnerData();
+	i->mInstanceKey = key;
+	RNBOUnity::instances.insert({ key, i });
+	*outkey = key;
+	return i;
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBOInstanceDestroy(RNBOUnity::InnerData * inst)
 {
-  auto key = inst->mInstanceKey;
+	auto key = inst->mInstanceKey;
 
-  std::unique_lock wlock(RNBOUnity::instances_mutex);
-  auto it = RNBOUnity::instances.find(key);
-  if (it == RNBOUnity::instances.end()) {
-    //ERROR
-  } else {
-    delete inst;
-    RNBOUnity::instances.erase(key);
-  }
+	std::unique_lock wlock(RNBOUnity::instances_mutex);
+	auto it = RNBOUnity::instances.find(key);
+	if (it == RNBOUnity::instances.end()) {
+		//ERROR
+	} else {
+		delete inst;
+		RNBOUnity::instances.erase(key);
+	}
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBOProcess(RNBOUnity::InnerData * inner, float * buffer, int32_t channels, int32_t nframes, int32_t samplerate)
+extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBOProcess(RNBOUnity::InnerData * inner, RNBO::MillisecondTime now, float * buffer, int32_t channels, int32_t nframes, int32_t samplerate)
 {
-  inner->mCore.prepareToProcess(samplerate, nframes);
-  inner->mCore.process(buffer, channels, buffer, channels, nframes, nullptr, nullptr);
+	inner->mCore.prepareToProcess(samplerate, nframes);
+	inner->mCore.setCurrentTime(now);
+	inner->mCore.process(buffer, channels, buffer, channels, nframes, nullptr, nullptr);
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOInstanceMapped(int32_t key)
@@ -419,45 +424,45 @@ extern "C" UNITY_AUDIODSP_EXPORT_API const char * AUDIO_CALLING_CONVENTION RNBOG
 extern "C" UNITY_AUDIODSP_EXPORT_API const char * AUDIO_CALLING_CONVENTION RNBOGetPresets()
 {
 	static std::mutex localmutex;
-  static std::string presetsString;
+	static std::string presetsString;
 
-  std::lock_guard guard(localmutex);
+	std::lock_guard guard(localmutex);
 
-  //since we can't easily parse arbitrary JSON in unity yet, we simply convert the preset payloads
-  //to strings
-  if (presetsString.empty()) {
-    nlohmann::json presets = nlohmann::json::array();
-    try {
-      nlohmann::json local = nlohmann::json::parse(RNBO::patcher_presets);
+	//since we can't easily parse arbitrary JSON in unity yet, we simply convert the preset payloads
+	//to strings
+	if (presetsString.empty()) {
+		nlohmann::json presets = nlohmann::json::array();
+		try {
+			nlohmann::json local = nlohmann::json::parse(RNBO::patcher_presets);
 
-      if (local.is_array()) {
-        for (auto p: local) {
-          if (!(p.is_object() && p.contains("name") && p.contains("preset"))) {
-            std::cerr << "unexpected preset entry format" << std::endl;
-            continue;
-          }
+			if (local.is_array()) {
+				for (auto p: local) {
+					if (!(p.is_object() && p.contains("name") && p.contains("preset"))) {
+						std::cerr << "unexpected preset entry format" << std::endl;
+						continue;
+					}
 
-          std::string name = p["name"].get<std::string>();
-          std::string payload = p["preset"].dump();
+					std::string name = p["name"].get<std::string>();
+					std::string payload = p["preset"].dump();
 
-          nlohmann::json entry = {
-              {"name", name},
-              {"preset", payload}
-          };
+					nlohmann::json entry = {
+							{"name", name},
+							{"preset", payload}
+					};
 
-          presets.push_back(entry);
-        }
-      }
-    } catch (std::exception& e) {
-      std::cerr << "exception processing presets " << e.what() << std::endl;
-    }
+					presets.push_back(entry);
+				}
+			}
+		} catch (std::exception& e) {
+			std::cerr << "exception processing presets " << e.what() << std::endl;
+		}
 
-    //add presets prefix so it is easier for Unity side to parse
-    nlohmann::json o = {
-      {"presets", presets}
-    };
-    presetsString = o.dump();
-  }
+		//add presets prefix so it is easier for Unity side to parse
+		nlohmann::json o = {
+			{"presets", presets}
+		};
+		presetsString = o.dump();
+	}
 
 	return presetsString.c_str();
 }
@@ -465,40 +470,40 @@ extern "C" UNITY_AUDIODSP_EXPORT_API const char * AUDIO_CALLING_CONVENTION RNBOG
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOLoadPreset(int32_t key, const char * payload)
 {
 	return with_instance(key, [payload](RNBOUnity::InnerData* inner) {
-      try {
-        auto preset = RNBO::convertJSONToPreset(std::string(payload));
-        inner->mCore.setPreset(std::move(preset));
-      } catch (std::exception& e) {
-        std::cerr << "error converting preset payload to RNBO preset " << e.what() << std::endl;
-      }
-  });
+			try {
+				auto preset = RNBO::convertJSONToPreset(std::string(payload));
+				inner->mCore.setPreset(std::move(preset));
+			} catch (std::exception& e) {
+				std::cerr << "error converting preset payload to RNBO preset " << e.what() << std::endl;
+			}
+	});
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOGetPresetSync(int32_t key, char ** payload)
 {
-  if (!payload) {
-    return false;
-  }
+	if (!payload) {
+		return false;
+	}
 
-  *payload = nullptr;
+	*payload = nullptr;
 
 	return with_instance(key, [payload](RNBOUnity::InnerData * inner) {
-      try {
-        auto preset = inner->mCore.getPresetSync();
-        std::string s = RNBO::convertPresetToJSON(*preset);
-        *payload = new char[s.size() + 1];
-        std::strcpy(*payload, s.c_str());
-      } catch (std::exception& e) {
-        std::cerr << "error capturing preset " << e.what() << std::endl;
-      }
-  });
+			try {
+				auto preset = inner->mCore.getPresetSync();
+				std::string s = RNBO::convertPresetToJSON(*preset);
+				*payload = new char[s.size() + 1];
+				std::strcpy(*payload, s.c_str());
+			} catch (std::exception& e) {
+				std::cerr << "error capturing preset " << e.what() << std::endl;
+			}
+	});
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBOFreePreset(char * payload)
 {
-  if (payload) {
-    delete [] payload;
-  }
+	if (payload) {
+		delete [] payload;
+	}
 }
 
 

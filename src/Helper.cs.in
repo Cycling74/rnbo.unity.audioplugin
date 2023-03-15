@@ -28,7 +28,7 @@ public class ${PLUGIN_NAME_ID}Handle {
     private static extern void RNBOInstanceDestroy(IntPtr instance);
 
     [DllImport("${PLUGIN_NAME}")]
-    private static extern void RNBOProcess(IntPtr instance, float[] data, int channels, int nframes, int samplerate);
+    private static extern void RNBOProcess(IntPtr instance, MillisecondTime now, float[] data, int channels, int nframes, int samplerate);
 
     [DllImport("${PLUGIN_NAME}")]
     private static extern MessageTag RNBOTag(IntPtr tagString);
@@ -216,7 +216,8 @@ public class ${PLUGIN_NAME_ID}Handle {
             throw new InvalidOperationException("Process can only be called on owned instances");
         }
 
-        RNBOProcess(ownedInstance, data, channels, data.Length / channels, sampleRate);
+        MillisecondTime now = (MillisecondTime)(AudioSettings.dspTime * 1000.0);
+        RNBOProcess(ownedInstance, now, data, channels, data.Length / channels, sampleRate);
     }
 
     public bool ResolveTag(MessageTag tag, out string tagStr) {
