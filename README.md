@@ -7,7 +7,7 @@ Here we implement a Native Audio Plugin for Unity as well as a helper object for
 
 There are 2 pieces to this project.
 
-The first piece is our **RNBOTypes** package. This contains CSharp code that your custom plugin 
+The first piece is our **RNBOTypes** package. This contains C# code that your custom plugin 
 export will reference. If you create multiple exports, they will all reference the same **RNBOTypes** 
 project.
 
@@ -29,9 +29,6 @@ cmake --build .
 After that you should see a folder in your build directory called **Foo Bar**. This should contain
 all you need to install it as a package in Unity.
 
-### Installation
-
-You should use "Add package from disk..." via Unity's Package Manager to install both the **RNBOTypes** and **Foo Bar** packages.
 
 ## Resources
 
