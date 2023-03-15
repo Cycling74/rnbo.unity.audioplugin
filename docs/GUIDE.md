@@ -32,13 +32,17 @@ In the Inspector, check "Load on Startup" and then "Apply."
 
 Now you you should be able to load your RNBO plugin in your Unity project.
 
-## Where you can load your RNBO Device
+## Where you can load your RNBO Plugin
 
-### On an Audio Mixer
+There are ways to add your RNBO plugin into your project—as a plugin loaded onto a track on an Audio Mixer, or by implementing a custom filter in a script attached as a Component to a GameObject. 
 
-Create a new Audio Mixer and add the RNBO plugin to a track as an effect—for example, the "Master" track.
+In this document, we'll discuss loading the plugin on an Audio Mixer. When you create a custom filter, you'll use many of the same methods to access your RNBO device, but the means of setting up the filter are distinct enough to warrant its own document. Visit [CUSTOMFILTER.md](CUSTOMFILTER.md) for that guide.
 
-To hear your audio plugin in Unity, add an Audio Source Game Object and set its Output to the Master track of this Audio Mixer.
+### Loading your Plugin on an Audio Mixer
+
+Create a new [Audio Mixer](https://docs.unity3d.com/Manual/AudioMixer.html) and add the RNBO plugin to a track as an effect—for example, the "Master" track.
+
+To hear your audio plugin in Unity, add an Audio Source and set its Output to the Master track of this Audio Mixer.
 
 *Note that when a plugin is loaded on an Audio Mixer, it will by default create a GUI in the Inspector with sliders for each parameter. These sliders are not necessarily functional, nor do they accurately represent the current value of a parameter in your RNBO device, especially if you are setting those parameters via a C# script.*
 
