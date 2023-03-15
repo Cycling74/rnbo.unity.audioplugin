@@ -7,7 +7,7 @@ After following the steps below, learn more about working with [RNBO in Unity](d
 
 ## Project organization
 
-There are 2 pieces to this project.
+There are two pieces to this project.
 
 The first piece is our **RNBOTypes** package. This contains C# code that your custom plugin 
 export will reference. If you create multiple plugins, they will all reference the same **RNBOTypes** 
@@ -18,8 +18,8 @@ adapter code you need to convert your RNBO C++ export into a plugin that you can
 
 ### Building
 
-We use Cmake to actually build the plugin and its package. Assuming you've [exported your patcher](https://rnbo.cycling74.com/learn/the-cpp-source-code-target-introduction) to a subdirectory
-called `export` next to the `src` directory, and your export is called `rnbo_source.cpp`, you can run the following in your terminal to build with Cmake. 
+We use Cmake to actually build the plugin and its package. [Export your patcher](https://rnbo.cycling74.com/learn/the-cpp-source-code-target-introduction) to a subdirectory
+called `export` in this repo's root directory, next to the `src` directory, and if your export is called `rnbo_source.cpp`, you can run the following commands in your terminal to build with Cmake. 
 
 Start by opening a terminal in the root of this `/rnbo.unity.audioplugin` directory. Then run:
 
