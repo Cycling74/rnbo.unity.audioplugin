@@ -17,6 +17,11 @@ extern "C" {
 	typedef void (UNITY_AUDIODSP_CALLBACK * CParameterEventCallback)(size_t, RNBO::ParameterValue, RNBO::MillisecondTime);
 	typedef void (UNITY_AUDIODSP_CALLBACK * CMessageEventCallback)(uint32_t, size_t, RNBO::ParameterValue *, size_t, RNBO::MillisecondTime);
 	typedef void (UNITY_AUDIODSP_CALLBACK * CReleaseDataRefCallback)(size_t);
+
+	typedef void (UNITY_AUDIODSP_CALLBACK * CTransportEventCallback)(bool, RNBO::MillisecondTime);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CTempoEventCallback)(RNBO::number, RNBO::MillisecondTime);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CBeatTimeEventCallback)(RNBO::number, RNBO::MillisecondTime);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CTimeSignatureEventCallback)(int32_t, int32_t, RNBO::MillisecondTime);
 }
 
 namespace RNBOUnity
@@ -609,6 +614,38 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOSendMIDI(
 	});
 }
 
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOSendTransportEvent(int32_t key, bool running, RNBO::MillisecondTime attime)
+{
+	return with_instance(key, [running, attime](RNBOUnity::InnerData * inner) {
+			RNBO::TransportEvent event(attime, running ? RNBO::TransportState::RUNNING : RNBO::TransportState::STOPPED);
+			inner->mCore.scheduleEvent(event);
+	});
+}
+
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOSendTempoEvent(int32_t key, RNBO::number bpm, RNBO::MillisecondTime attime)
+{
+	return with_instance(key, [bpm, attime](RNBOUnity::InnerData * inner) {
+			RNBO::TempoEvent event(attime, bpm);
+			inner->mCore.scheduleEvent(event);
+	});
+}
+
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOSendBeatTimeEvent(int32_t key, RNBO::number beattime, RNBO::MillisecondTime attime)
+{
+	return with_instance(key, [beattime, attime](RNBOUnity::InnerData * inner) {
+			RNBO::BeatTimeEvent event(attime, beattime);
+			inner->mCore.scheduleEvent(event);
+	});
+}
+
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOSendTimeSignatureEvent(int32_t key, int32_t numerator, int32_t denominator, RNBO::MillisecondTime attime)
+{
+	return with_instance(key, [numerator, denominator, attime](RNBOUnity::InnerData * inner) {
+			RNBO::TimeSignatureEvent event(attime, numerator, denominator);
+			inner->mCore.scheduleEvent(event);
+	});
+}
+
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOCopyLoadDataRef(int32_t key, const char * id, const float * data, size_t datalen, size_t channels, size_t samplerate)
 {
 	return with_instance(key, [id, data, datalen, channels, samplerate](RNBOUnity::InnerData * inner) {
@@ -661,4 +698,49 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterM
 			});
 	});
 }
+
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTransportEventCallback(int32_t key, CTransportEventCallback callback)
+{
+	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setTransportEventCallback([callback](RNBO::TransportEvent event) {
+					if (callback) {
+						callback(event.getState() == RNBO::TransportState::RUNNING, event.getTime());
+					}
+			});
+	});
+}
+
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTempoEventCallback(int32_t key, CTempoEventCallback callback)
+{
+	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setTempoEventCallback([callback](RNBO::TempoEvent event) {
+					if (callback) {
+						callback(event.getTempo(), event.getTime());
+					}
+			});
+	});
+}
+
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterBeatTimeEventCallback(int32_t key, CBeatTimeEventCallback callback)
+{
+	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setBeatTimeEventCallback([callback](RNBO::BeatTimeEvent event) {
+					if (callback) {
+						callback(event.getBeatTime(), event.getTime());
+					}
+			});
+	});
+}
+
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTimeSignatureEventCallback(int32_t key, CTimeSignatureEventCallback callback)
+{
+	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setTimeSignatureEventCallback([callback](RNBO::TimeSignatureEvent event) {
+					if (callback) {
+						callback(static_cast<int32_t>(event.getNumerator()), static_cast<int32_t>(event.getDenominator()), event.getTime());
+					}
+			});
+	});
+}
+
 #endif

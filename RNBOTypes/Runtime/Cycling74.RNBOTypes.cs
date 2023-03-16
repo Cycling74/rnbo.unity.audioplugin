@@ -108,6 +108,52 @@ namespace Cycling74.RNBOTypes {
         public MillisecondTime Time { get; private set; }
     }
 
+    public class TempoEventArgs : EventArgs {
+        public TempoEventArgs(Float val, MillisecondTime time)
+        {
+            Tempo = val;
+            Time = time;
+        }
+
+        public Float Tempo { get; private set; }
+        public MillisecondTime Time { get; private set; }
+    }
+
+    public class BeatTimeEventArgs : EventArgs {
+        public BeatTimeEventArgs(Float val, MillisecondTime time)
+        {
+            BeatTime = val;
+            Time = time;
+        }
+
+        public Float BeatTime { get; private set; }
+        public MillisecondTime Time { get; private set; }
+    }
+
+    public class TransportEventArgs : EventArgs {
+        public TransportEventArgs(bool running, MillisecondTime time)
+        {
+            Running = running;
+            Time = time;
+        }
+
+        public bool Running { get; private set; }
+        public MillisecondTime Time { get; private set; }
+    }
+
+    public class TimeSignatureEventArgs : EventArgs {
+        public TimeSignatureEventArgs(int numerator, int denominator, MillisecondTime time)
+        {
+            Numerator = numerator;
+            Denominator = denominator;
+            Time = time;
+        }
+
+        public int Numerator { get; private set; }
+        public int Denominator { get; private set; }
+        public MillisecondTime Time { get; private set; }
+    }
+
     [System.Serializable]
     public class PresetEntry {
         public string name;

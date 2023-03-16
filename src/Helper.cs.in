@@ -17,6 +17,10 @@ using MessageTag = System.UInt32;
 public class ${PLUGIN_NAME_ID}Handle {
     public event EventHandler<ParameterChangedEventArgs> ParameterChangedEvent;
     public event EventHandler<MessageEventArgs> MessageEvent;
+    public event EventHandler<TransportEventArgs> TransportEvent;
+    public event EventHandler<TempoEventArgs> TempoEvent;
+    public event EventHandler<BeatTimeEventArgs> BeatTimeEvent;
+    public event EventHandler<TimeSignatureEventArgs> TimeSignatureEvent;
 
     [UnmanagedFunctionPointer(CallingConvention.StdCall)]
     private delegate void ReleaseDataRefDelegate(UIntPtr id);
@@ -66,6 +70,18 @@ public class ${PLUGIN_NAME_ID}Handle {
     [DllImport("${PLUGIN_NAME}", CallingConvention = CallingConvention.StdCall)]
     private static extern bool RNBORegisterMessageEventCallback(int key, IntPtr callback);
 
+    [DllImport("${PLUGIN_NAME}", CallingConvention = CallingConvention.StdCall)]
+    private static extern bool RNBORegisterTransportEventCallback(int key, IntPtr callback);
+
+    [DllImport("${PLUGIN_NAME}", CallingConvention = CallingConvention.StdCall)]
+    private static extern bool RNBORegisterTempoEventCallback(int key, IntPtr callback);
+
+    [DllImport("${PLUGIN_NAME}", CallingConvention = CallingConvention.StdCall)]
+    private static extern bool RNBORegisterBeatTimeEventCallback(int key, IntPtr callback);
+
+    [DllImport("${PLUGIN_NAME}", CallingConvention = CallingConvention.StdCall)]
+    private static extern bool RNBORegisterTimeSignatureEventCallback(int key, IntPtr callback);
+
     [DllImport("${PLUGIN_NAME}")]
     private static extern bool RNBOSendMessageBang(int key, MessageTag tag, MillisecondTime atTime);
 
@@ -77,6 +93,18 @@ public class ${PLUGIN_NAME_ID}Handle {
 
     [DllImport("${PLUGIN_NAME}")]
     private static extern bool RNBOSendMIDI(int key, [MarshalAs(UnmanagedType.LPArray)] byte[] data, IntPtr dataLen, MillisecondTime atTime);
+
+    [DllImport("${PLUGIN_NAME}")]
+    private static extern bool RNBOSendTransportEvent(int key, bool running, MillisecondTime atTime);
+
+    [DllImport("${PLUGIN_NAME}")]
+    private static extern bool RNBOSendTempoEvent(int key, Float bpm, MillisecondTime atTime);
+
+    [DllImport("${PLUGIN_NAME}")]
+    private static extern bool RNBOSendBeatTimeEvent(int key, Float beattime, MillisecondTime atTime);
+
+    [DllImport("${PLUGIN_NAME}")]
+    private static extern bool RNBOSendTimeSignatureEvent(int key, int numerator, int denominator, MillisecondTime atTime);
 
     [DllImport("${PLUGIN_NAME}")]
     private static extern bool RNBOCopyLoadDataRef(int key, IntPtr id, [MarshalAs(UnmanagedType.LPArray)] System.Single[] data, IntPtr datalen, IntPtr channels, IntPtr samplerate);
@@ -198,7 +226,13 @@ public class ${PLUGIN_NAME_ID}Handle {
     private bool registered = false;
     private void RegisterIfNeeded() {
         if (!registered) {
-            registered = RegisterParameterEventDelegate() && RegisterMessageEventDelegate();
+            registered = RegisterParameterEventDelegate() 
+                && RegisterMessageEventDelegate() 
+                && RegisterTransportEventDelegate() 
+                && RegisterTempoEventDelegate() 
+                && RegisterBeatTimeEventDelegate() 
+                && RegisterTimeSignatureEventDelegate() 
+                ;
         }
     }
     
@@ -211,13 +245,16 @@ public class ${PLUGIN_NAME_ID}Handle {
         RNBOPoll(PluginKey);
     }
 
+    public MillisecondTime Now {
+        get => (MillisecondTime)(AudioSettings.dspTime * 1000.0);
+    }
+
     public void Process(float[] data, int channels) {
         if (!OwnsInstance) {
             throw new InvalidOperationException("Process can only be called on owned instances");
         }
 
-        MillisecondTime now = (MillisecondTime)(AudioSettings.dspTime * 1000.0);
-        RNBOProcess(ownedInstance, now, data, channels, data.Length / channels, sampleRate);
+        RNBOProcess(ownedInstance, Now, data, channels, data.Length / channels, sampleRate);
     }
 
     public bool ResolveTag(MessageTag tag, out string tagStr) {
@@ -323,6 +360,22 @@ public class ${PLUGIN_NAME_ID}Handle {
         return SendMIDI(data, atTime);
     }
 
+    public bool SetTransportRunning(bool on, MillisecondTime atTime = 0) {
+        return RNBOSendTransportEvent(PluginKey, on, atTime);
+    }
+
+    public bool SetTempo(Float val, MillisecondTime atTime = 0) {
+        return RNBOSendTempoEvent(PluginKey, val, atTime);
+    }
+
+    public bool SetBeatTime(Float val, MillisecondTime atTime = 0) {
+        return RNBOSendBeatTimeEvent(PluginKey, val, atTime);
+    }
+    
+    public bool SetTimeSignature(int numerator, int denominator, MillisecondTime atTime = 0) {
+        return RNBOSendTimeSignatureEvent(PluginKey, numerator, denominator, atTime);
+    }
+
     public bool LoadDataRef(string id, float[] data, int channels, int samplerate) {
         IntPtr idPtr = (IntPtr)Marshal.StringToHGlobalAnsi(id);
         var r = RNBOCopyLoadDataRef(PluginKey, idPtr, data, (IntPtr)data.Length, (IntPtr)channels, (IntPtr)samplerate);
@@ -359,10 +412,9 @@ public class ${PLUGIN_NAME_ID}Handle {
         return r;
     }
 
+    //keep a reference to the callback so that it isn't garabage collected
     [UnmanagedFunctionPointer(CallingConvention.StdCall)]
     private delegate void InternalParameterEventDelegate(ParameterIndex index, ParameterValue value, MillisecondTime time);
-
-    //keep a reference to the callback so that it isn't garabage collected
     private InternalParameterEventDelegate registeredParameterEventDelegate;
     private bool RegisterParameterEventDelegate() {
         InternalParameterEventDelegate d = (index, value, time) => {
@@ -377,10 +429,9 @@ public class ${PLUGIN_NAME_ID}Handle {
         return r;
     }
 
+    //keep a reference to the callback so that it isn't garabage collected
     [UnmanagedFunctionPointer(CallingConvention.StdCall)]
     private delegate void InternalMessageEventDelegate(MessageTag tag, IntPtr messageType, IntPtr valuesPtr, IntPtr valueCount, MillisecondTime time);
-
-    //keep a reference to the callback so that it isn't garabage collected
     private InternalMessageEventDelegate registeredMessageEventDelegate;
     private bool RegisterMessageEventDelegate() {
         InternalMessageEventDelegate d = (tag, messageType, valuesPtr, valueCount, time) => {
@@ -402,6 +453,66 @@ public class ${PLUGIN_NAME_ID}Handle {
         };
         var r = RNBORegisterMessageEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(d));
         registeredMessageEventDelegate = d;
+        return r;
+    }
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate void InternalTransportEventDelegate(bool running, MillisecondTime time);
+    private InternalTransportEventDelegate registeredTransportEventDelegate;
+    private bool RegisterTransportEventDelegate() {
+        InternalTransportEventDelegate d = (on, time) => {
+            var e = TransportEvent;
+            if (e != null) {
+                e(this, new TransportEventArgs(on, time));
+            }
+        };
+        var r = RNBORegisterTransportEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(d));
+        registeredTransportEventDelegate = d;
+        return r;
+    }
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate void InternalTempoEventDelegate(Float bpm, MillisecondTime time);
+    private InternalTempoEventDelegate registeredTempoEventDelegate;
+    private bool RegisterTempoEventDelegate() {
+        InternalTempoEventDelegate d = (value, time) => {
+            var e = TempoEvent;
+            if (e != null) {
+                e(this, new TempoEventArgs(value, time));
+            }
+        };
+        var r = RNBORegisterTempoEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(d));
+        registeredTempoEventDelegate = d;
+        return r;
+    }
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate void InternalBeatTimeEventDelegate(Float value, MillisecondTime time);
+    private InternalBeatTimeEventDelegate registeredBeatTimeEventDelegate;
+    private bool RegisterBeatTimeEventDelegate() {
+        InternalBeatTimeEventDelegate d = (value, time) => {
+            var e = BeatTimeEvent;
+            if (e != null) {
+                e(this, new BeatTimeEventArgs(value, time));
+            }
+        };
+        var r = RNBORegisterBeatTimeEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(d));
+        registeredBeatTimeEventDelegate = d;
+        return r;
+    }
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate void InternalTimeSignatureEventDelegate(int numerator, int denominator,  MillisecondTime time);
+    private InternalTimeSignatureEventDelegate registeredTimeSignatureEventDelegate;
+    private bool RegisterTimeSignatureEventDelegate() {
+        InternalTimeSignatureEventDelegate d = (numerator, denominator, time) => {
+            var e = TimeSignatureEvent;
+            if (e != null) {
+                e(this, new TimeSignatureEventArgs(numerator, denominator, time));
+            }
+        };
+        var r = RNBORegisterTimeSignatureEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(d));
+        registeredTimeSignatureEventDelegate = d;
         return r;
     }
 }
