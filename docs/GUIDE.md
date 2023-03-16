@@ -2,7 +2,7 @@
 
 The RNBO Unity Audio Plugin provides an API that facilitates integration of your RNBO device with the Unity game engine. Alongside the plugin itself, we build a helper object which contains various methods to help you access your device's parameters, presets, buffers, inlets and outlets.
 
-In this guide, we'll discuss the basics of adding your RNBO device as a plugin in a Unity project and how to use this API to add procedural audio to your game. 
+In this guide, we'll discuss the basics of adding your RNBO device as a plugin in a Unity project and how to use this API to add procedural audio to your game. As this integration is in an expiremental state, so is this documentation, and this guide should not be considered an encyclopedic reference, but rather a quick-start with a handful of ways to use this tool.
 
 ## Getting started
 
@@ -40,15 +40,51 @@ In this document, we'll discuss loading the plugin on an Audio Mixer. When you c
 
 ### Loading your Plugin on an Audio Mixer
 
-Create a new [Audio Mixer](https://docs.unity3d.com/Manual/AudioMixer.html) and add the RNBO plugin to a track as an effect—for example, the "Master" track.
+Create a new [Audio Mixer](https://docs.unity3d.com/Manual/AudioMixer.html) and add the RNBO plugin to a track as an effect—for example, the "Master" track—from the "Add..." dropdown menu.
 
-To hear your audio plugin in Unity, add an Audio Source and set its Output to the Master track of this Audio Mixer.
+![instance-index](images/instance-index.png)
+
+Once you've added your plugin, set an instance index — this should be an **integer** that you will use in your scripts to refer to a specific *instance* of your plugin, loaded on this Audio Mixer. Note that although Unity's default GUI indicates you should be able to set a *float* value here, you should make sure to use a whole number. 
+
+To hear your audio plugin in Unity, add an [Audio Source](https://docs.unity3d.com/Manual/class-AudioSource.html) and set its **Output** to the Master track of this Audio Mixer.
 
 *Note that when a plugin is loaded on an Audio Mixer, it will by default create a GUI in the Inspector with sliders for each parameter. These sliders are not necessarily functional, nor do they accurately represent the current value of a parameter in your RNBO device, especially if you are setting those parameters via a C# script.*
 
-### As an Audio Filter
+## Addressing your RNBO Plugin from a C# Script
+
+In the package built for your plugin, there is a `/Scripts` directory which contains a helper script which shares your plugin's name. For example, if we have a plugin called `QuantizedBuffers`, then we also have a helper script called `QuantizedBuffersHelper.cs`.
+
+This helper script exposes a public `PLUGIN_NAMEHandle` class, or `QuantizedBuffersHandle`, in our case, which, along with the `PLUGIN_NAMEHelper` class, or in our case `QuantizedBuffersHelper`, helps us keep a *handle* on the instance of our plugin owned by the Audio Mixer. Let's take a look at how this might look in C#.
+
+In the next few examples, we'll build a drum kit we can play in Unity using this `QuantizedBuffers` plugin. If you want to follow along yourself, you can find `quantized-buffers.maxpat` in `/docs/example-patches`.
+
+In your Unity Project, in `Assets/Scripts/`, create a new C# script. The example below is called `DrumKit.cs`.
+
+```csharp
+using UnityEngine
+
+public class DrumKit : MonoBehaviour
+{
+    QuantizedBuffersHelper quantizedBuffersHelper;
+    QuantizedBuffersHandle myQuantizedBuffersPlugin;
+
+    const int instanceIndex = 1; // this corresponds to the Instance Index key we set in the mixer
+
+    void Start()
+    {
+        quantizedBuffersHelper = QuantizedBuffersHelper.FindById(instanceIndex);
+        myQuantizedBuffersPlugin = quantizedBuffersHelper.Plugin;
+    }
+}
+```
+
+Here, we create a class property of type `QuantizedBuffersHelper` and another of type `QuantizedBuffersHandle`. We'll use the first to ensure that our script targets the specific instance of our plugin that we want. 
+
+We then access the helper's `Plugin` member, which is `QuantizedBuffersHandle` in order to gain access to methods of the handle that can get/set parameters, send and receive messages, and otherwise interact with the RNBO device.
 
 ## Getting and Setting Parameters
+
+
 
 ## Sending and Receiving Messages (Inlets + Outlets)
 
