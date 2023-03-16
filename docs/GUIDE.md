@@ -80,7 +80,7 @@ public class DrumKit : MonoBehaviour
 
 Here, we create a class property of type `QuantizedBuffersHelper` and another of type `QuantizedBuffersHandle`. We'll use the first to ensure that our script targets the specific instance of our plugin that we want. 
 
-We then access the helper's `Plugin` member, which is `QuantizedBuffersHandle` in order to gain access to methods of the handle that can get/set parameters, send and receive messages, and otherwise interact with the RNBO device.
+We then access the helper's `Plugin` member, which is a `QuantizedBuffersHandle` in order to gain access to methods of the handle that can get or set parameters, send and receive messages, and otherwise interact with the RNBO device.
 
 ## Getting and Setting Parameters
 
