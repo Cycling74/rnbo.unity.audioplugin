@@ -1,6 +1,8 @@
 # RNBO Unity Audio Plugin
 
-This is experimental software, use at your own risk.
+This is experimental software, use at your own risk, and know that anything in this repository could change in the future.
+
+
 Here we implement a Native Audio Plugin for Unity as well as a helper object that facilitates working with that plugin.
 
 After following the steps below, learn more about working with [RNBO in Unity](docs/GUIDE.md).
@@ -16,10 +18,21 @@ package.
 The second piece is our [NativeAudioPlugin](https://docs.unity3d.com/Manual/AudioMixerNativeAudioPlugin.html) implementation and helper script.  This contains the
 adapter code you need to convert your RNBO C++ export into a plugin that you can load in Unity.
 
-### Building
+### File Structure and Building
+
+The source code of the Plugin itself is in the `src/` directory. In general use of this repository, you shouldn't need to change anything in that directory.
+
+Some notable directories:
+
+| Location                          | Explanation   |
+| --------------------------------- | ------------- |
+| export/                           | You'll need to create this folder, and export your code here |
+| build/          | You'll need to create this folder, your built Plugin package will end up here |
+| src/                              | Source for the RNBO Plugin and helper object |
+| RNBOTypes/  | A dependency for the built Plugin — you'll install this into your Unity Project |
 
 We use Cmake to actually build the plugin and its package. [Export your patcher](https://rnbo.cycling74.com/learn/the-cpp-source-code-target-introduction) to a subdirectory
-called `export` in this repo's root directory, next to the `src` directory, and if your export is called `rnbo_source.cpp`, you can run the following commands in your terminal to build with Cmake. 
+you make called `export` in this repo's root directory, next to the `src` directory, and if your export is called `rnbo_source.cpp`, you can run the following commands in your terminal to build with Cmake. 
 
 Start by opening a terminal in the root of this `/rnbo.unity.audioplugin` directory. Then run:
 
