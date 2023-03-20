@@ -53,6 +53,19 @@ cmake .. -DRNBO_CLASS_FILE_NAME="my_custom_plugin.cpp" -DPLUGIN_NAME="My Custom 
 cmake --build .
 ```
 
+You can also export your c++ code into and build from some other location, other than `export/` and `build/`.
+You'll need to tell cmake where to find your export dir and likely also your RNBO c++ library code.
+This can be useful if you want to build several unique plugins from unique RNBO exports.
+
+For example:
+
+```sh
+mkdir build-synth
+cd build-synth
+cmake .. -DRNBO_EXPORT_DIR=/Users/xnor/Documents/export/simple-freq-param -DRNBO_CPP_DIR=/Users/xnor/Documents/export/simple-freq-param/rnbo -DPLUGIN_NAME="Simple Freq Param" 
+cmake --build .
+```
+
 After building, you should see a folder in your `/build` directory called **My Custom Plugin**. This should contain
 all you need to install it as a package in Unity.
 
