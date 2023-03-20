@@ -1,5 +1,5 @@
-/export
-build/
+/export*
+/build*
 
 *.meta
 
