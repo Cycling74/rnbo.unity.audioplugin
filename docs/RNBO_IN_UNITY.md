@@ -9,11 +9,11 @@ In these guides, we'll discuss the basics of adding your RNBO device as a plugin
 ### [Getting Started](GETTING_STARTED.md)
 ### [Addressing your RNBO Plugin from a C# Script](RNBO_SCRIPTING.md)
 ### [Getting and Setting Parameters](PARAMETERS.md)
-### Sending and Receiving Messages (Inlets + Outlets)
+### [Sending and Receiving Messages](MESSAGES.md)
+### [Buffers and File Dependencies](BUFFERS.md)
 ### Sending and Receiving MIDI 
 ### Events related to Musical Time
 ### Loading and Storing Presets
-### Buffers and File Dependencies 
 ### Working with Multiple RNBO Devices
 ### [Making a Custom Filter](CUSTOM_FILTER.md)
 
