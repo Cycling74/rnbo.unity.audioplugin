@@ -59,7 +59,8 @@ all you need to install it as a package in Unity.
 
 ## Resources
 
-* [rnbo](https://rnbo.cycling74.com/)
+* [RNBO](https://rnbo.cycling74.com/)
+* [RNBO Licensing FAQ](https://support.cycling74.com/hc/en-us/articles/10730637742483-RNBO-Export-Licensing-FAQ)
 * [Unity](https://unity.com/)
   * [NativeAudioPlugins](https://github.com/Unity-Technologies/NativeAudioPlugins)
   * [NativeAudioPlugins Docs](https://docs.unity3d.com/Manual/AudioMixerNativeAudioPlugin.html)
