@@ -3,7 +3,13 @@
   "version": "${PLUGIN_VERSION}",
   "displayName": "${PLUGIN_NAME}",
   "unity": "2017.1",
+  "licensesUrl": "https://support.cycling74.com/hc/en-us/articles/10730031661587",
   "dependencies": { 
       "com.cycling74.rnbotypes": "0.0.1"
-  }
+  },
+  "keywords": [
+    "rnbo",
+    "audio",
+    "native_audio_plugin"
+  ]
 }
