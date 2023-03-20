@@ -26,13 +26,13 @@ Some notable directories:
 
 | Location                          | Explanation   |
 | --------------------------------- | ------------- |
-| export/                           | You'll need to create this folder, and export your code here |
-| build/          | You'll need to create this folder, your built Plugin package will end up here |
 | src/                              | Source for the RNBO Plugin and helper object |
 | RNBOTypes/  | A dependency for the built Plugin — you'll install this into your Unity Project |
+| export/                           | You can create this folder and export your code here for an easy default experience |
+| build/          | You can create this folder to build your Plugin package |
 
-We use Cmake to actually build the plugin and its package. [Export your patcher](https://rnbo.cycling74.com/learn/the-cpp-source-code-target-introduction) to a subdirectory
-you make called `export` in this repo's root directory, next to the `src` directory, and if your export is called `rnbo_source.cpp`, you can run the following commands in your terminal to build with Cmake. 
+We use CMake to actually build the plugin and its package. [Export your patcher](https://rnbo.cycling74.com/learn/the-cpp-source-code-target-introduction) to a subdirectory
+you make called `export` in this repo's root directory, next to the `src` directory, and if your export is called `rnbo_source.cpp`, you can run the following commands in your terminal to build with CMake. 
 
 Start by opening a terminal in the root of this `/rnbo.unity.audioplugin` directory. Then run:
 
@@ -42,7 +42,7 @@ cd build
 cmake .. -DPLUGIN_NAME="My Custom Plugin"
 cmake --build .
 ```
-If you change the name of your export from `rnbo_source.cpp` in RNBO's export sidebar, you can either change the Cmake variable `RNBO_CLASS_FILE_NAME` in `CMakeLists.txt` or use the Cmake flag `-DRNBO_CLASS_FILE_NAME` when you run `cmake ..`
+If you change the name of your export from `rnbo_source.cpp` in RNBO's export sidebar, you can either change the CMake variable `RNBO_CLASS_FILE_NAME` in `CMakeLists.txt` or use the CMake flag `-DRNBO_CLASS_FILE_NAME` when you run `cmake ..`
 
 For example:
 
@@ -54,7 +54,7 @@ cmake --build .
 ```
 
 You can also export your c++ code into and build from some other location, other than `export/` and `build/`.
-You'll need to tell cmake where to find your export dir and likely also your RNBO c++ library code.
+You'll need to tell CMake where to find your export dir and likely also your RNBO c++ library code.
 This can be useful if you want to build several unique plugins from unique RNBO exports.
 
 For example:
