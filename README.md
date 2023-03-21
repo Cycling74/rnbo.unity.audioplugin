@@ -1,6 +1,6 @@
 # RNBO Unity Audio Plugin
 
-This is experimental software, use at your own risk, and know that anything in this repository could change in the future.
+*This is experimental software—use at your own risk, and know that anything in this repository could change in the future.*
 
 
 Here we implement a Native Audio Plugin for Unity as well as a helper object that facilitates working with that plugin.
