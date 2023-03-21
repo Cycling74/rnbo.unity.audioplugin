@@ -1,43 +1,39 @@
 # Making a Custom Filter with RNBO
 
+An example script, which, given a plugin called **TestOrbs**, will instantiate a custom filter on a `GameObject` when attached as a component.
+
+More documentation coming soon!
+
 ```c#
-using System;
 using UnityEngine;
-using UnityEngine.Audio;
 
 [RequireComponent(typeof(AudioSource))]
-public class PlayerMovement : MonoBehaviour
+public class OrbPlayer : MonoBehaviour
 {
-    SimpleFreqParamHandle synth;
+    TestOrbsHandle synth;
 
-    public PlayerMovement() : base() { }
-
-    // Start is called before the first frame update
+    public OrbPlayer() : base() {}
+    
     void Start()
     {
-        synth = new SimpleFreqParamHandle();
+        synth = new TestOrbsHandle();
     }
 
-    // Update is called once per frame
     void Update()
     {
         synth.Update();
 
-        float horizontal = Input.GetAxisRaw("Horizontal");
-        float vertical = Input.GetAxisRaw("Vertical");
-
-        Vector3 direction = new Vector3(horizontal, 0f, vertical).normalized;
-        transform.Translate(direction * speed * Time.deltaTime);
     }
 
-    void OnAudioFilterRead(float[] data, int channels)
+    void OnAudioFilterRead(float[] data, int channels) 
     {
-        if (synth != null) {
+        if (synth != null)
+        {
             synth.Process(data, channels);
-        }
+        }    
     }
-
 }
+
 ```
 
 - Back to the [Table of Contents](RNBO_IN_UNITY.md#table-of-contents)

@@ -7,6 +7,10 @@ Here we implement a Native Audio Plugin for Unity as well as a helper object tha
 
 After following the steps below, learn more about working with [RNBO in Unity](docs/RNBO_IN_UNITY.md).
 
+Check out a working example over at [RNBO Unity Test Project](https://github.com/Cycling74/rnbo.unity.testproj).
+
+![Drum Kit and Orb](docs/images/drumkit-orb.png)
+
 ## Project organization
 
 There are two pieces to this project.
