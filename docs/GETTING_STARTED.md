@@ -45,4 +45,4 @@ To hear your audio plugin in Unity, add an [Audio Source](https://docs.unity3d.c
 *Note that when a plugin is loaded on an Audio Mixer, it will by default create a GUI in the Inspector with sliders for each parameter. These sliders are not necessarily functional, nor do they accurately represent the current value of a parameter in your RNBO device, especially if you are setting those parameters via a C# script.*
 
 - Next: [Addressing your RNBO Plugin from a C# Script](RNBO_SCRIPTING.md)
-- Back to the [Table of Contents](RNBO_IN_UNITY.md#table-of-contents)
+- Back to the [Table of Contents](README.md#table-of-contents)
