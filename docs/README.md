@@ -11,9 +11,9 @@ In these guides, we'll discuss the basics of adding your RNBO device as a plugin
 ### [Getting and Setting Parameters](PARAMETERS.md)
 ### [Buffers and File Dependencies](BUFFERS.md)
 ### [Sending and Receiving Messages](MESSAGES.md)
-### [Events related to Musical Time](TRANSPORT_TEMPO.md)
-### Loading and Storing Presets
-### Sending and Receiving MIDI 
-### Working with Multiple RNBO Devices
+### [Events related to Musical Time](TRANSPORT_TEMPO.md) (coming soon)
+### Loading and Storing Presets (coming soon)
+### Sending and Receiving MIDI (coming soon)
+### Working with Multiple RNBO Devices (coming soon)
 ### [Making a Custom Filter](CUSTOM_FILTER.md)
 
