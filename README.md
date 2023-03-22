@@ -7,7 +7,7 @@ Here we implement a Native Audio Plugin for Unity as well as a helper object tha
 
 After following the steps below, learn more about working with [RNBO in Unity](docs/README.md).
 
-Check out a working example over at [RNBO Unity Test Project](https://github.com/Cycling74/rnbo.unity.testproj).
+Check out a working example of [a drumkit and a humming orb](https://cycling74-assets.nyc3.digitaloceanspaces.com/rnbo/unity/example-projects/RNBODrumkit.zip).
 
 ![Drum Kit and Orb](docs/images/drumkit-orb.png)
 
@@ -23,6 +23,8 @@ The second piece is our [NativeAudioPlugin](https://docs.unity3d.com/Manual/Audi
 adapter code you need to convert your RNBO C++ export into a plugin that you can load in Unity.
 
 ### File Structure and Building
+
+If you are on Windows, see some important [Building on Windows](#building-on-windows) notes below.
 
 The source code of the Plugin itself is in the `src/` directory. In general use of this repository, you shouldn't need to change anything in that directory.
 
@@ -72,6 +74,28 @@ cmake --build .
 
 After building, you should see a folder in your `/build` directory called **My Custom Plugin**. This should contain
 all you need to install it as a package in Unity.
+
+### Building On Windows
+
+If you are building your RNBO plugin on Windows, and run into any issues, in particular the compile error `cs2026`, this is a known bug that we are working to address. In the meantime, you'll need to do one of two things. 
+
+#### Option 1: Use a recent devbuild of RNBO
+
+If you have access to development builds of RNBO, you should be using version `1.2.0-dev.31` or later to export your RNBO patcher for use in this repository. 
+
+#### Option 2: Manually edit `description.json`
+
+If you are using the public release version of RNBO, `1.1.0`, you'll need to manually edit your exported `description.json` file to remove the entire entry for `paramConversion`. 
+
+```js
+"paramConversion": {
+
+},
+```
+
+Everything in this entry, including the word `"paramConversion"`, everything in the curly braces, and the final comma, should be deleted.
+
+Then, save the file and proceed with the instructions in this README for building your RNBO Plugin.
 
 
 ## Resources
