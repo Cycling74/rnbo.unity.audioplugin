@@ -16,8 +16,6 @@ set(PLUGIN_VERSION "0.0.1" CACHE STRING "Plugin version string")
 set(PLUGIN_MANUFACTURER_NAME "Cycling '74" CACHE STRING "Specify the name of the plugin's author")
 set(PLUGIN_MANUFACTURER_TLD "com" CACHE STRING "the Top Level Domain for your company's website URL")
 
-set(CONAN_PROFILE "default" CACHE STRING "The profile to use for building conan deps, this is useful for cross compiling")
-
 set(RNBO_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/export/rnbo/" CACHE PATH "The path to the the RNBO c++ source directory")
 set(RNBO_EXPORT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/export/" CACHE PATH "The directory that holds the generated RNBO exports")
 
@@ -31,7 +29,6 @@ set(RNBO_CLASS_FILE ${RNBO_EXPORT_DIR}/${RNBO_CLASS_FILE_NAME})
 set(RNBO_DESCRIPTION_FILE ${RNBO_EXPORT_DIR}/description.json)
 set(RNBO_PRESETS_FILE ${RNBO_EXPORT_DIR}/presets.json)
 
-include(${RNBO_CPP_DIR}/cmake/RNBOConan.cmake)
 include(${RNBO_CPP_DIR}/cmake/CCache.cmake)
 include(${RNBO_CPP_DIR}/cmake/MinGWSTDThreads.cmake)
 
