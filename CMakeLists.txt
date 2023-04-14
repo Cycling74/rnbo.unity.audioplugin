@@ -44,20 +44,46 @@ STRING(TOLOWER  ${PLUGIN_MANUFACTURER_NAME_ID} PLUGIN_MANUFACTURER_NAME_LOWER_ID
 
 set(PACKAGE_DIR ${CMAKE_BINARY_DIR}/${PLUGIN_NAME_ID})
 
-# Test platform and 
+# Test platform and bit depth
+set(BIT_DEPTH 32)
 if (NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-  message(FATAL "RNBOUnityPlugin currently only supports 64-bit platforms")
+  set(BIT_DEPTH 64)
 endif()
 
+#TODO platforms:
+#macOSStandalone
+#WindowsStandalone32
+#WindowsStandalone64
+#LinuxStandalone32
+#LinuxStandalone64
+#LinuxStandaloneUniversal
+#iOS
+#Android
+#WebGL
+#WSA
+#Tizen
+#PSVita
+#PS4
+#PSMobile
+#XboxOne
+#Nintendo3DS
+#WiiU
+#tvOS
+#Switch
+
 if (${CMAKE_SYSTEM_NAME} STREQUAL Linux)
-  set(PLUGIN_UNITY_PLATFORM_NAME "LinuxStandalone64")
+  set(PLUGIN_UNITY_PLATFORM_NAME "LinuxStandalone${BIT_DEPTH}")
 elseif (${CMAKE_SYSTEM_NAME} STREQUAL Windows)
-  set(PLUGIN_UNITY_PLATFORM_NAME "WindowsStandalone64")
+  set(PLUGIN_UNITY_PLATFORM_NAME "WindowsStandalone${BIT_DEPTH}")
 elseif (${CMAKE_SYSTEM_NAME} STREQUAL Darwin)
   set(PLUGIN_UNITY_PLATFORM_NAME "macOSStandalone")
+elseif (${CMAKE_SYSTEM_NAME} STREQUAL Android)
+  set(PLUGIN_UNITY_PLATFORM_NAME "Android")
 else()
   message(FATAL "${CMAKE_SYSTEM_NAME} not yet supported for RNBOUnityPlugin")
 endif()
+
+message(STATUS "building for ${PLUGIN_UNITY_PLATFORM_NAME} with bit depth ${BIT_DEPTH}")
 
 set(PLUGIN_DIR ${PACKAGE_DIR}/Assets/Plugins/${CMAKE_SYSTEM_NAME}/)
 

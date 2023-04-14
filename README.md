@@ -97,6 +97,25 @@ Everything in this entry, including the word `"paramConversion"`, everything in 
 
 Then, save the file and proceed with the instructions in this README for building your RNBO Plugin.
 
+### Building for Android
+
+If you've installed the NDK via Unity Hub, you should be able to find it here:
+
+* On MacOS:
+  * `/Applications/Unity/Hub/Editor/<YOUR EDITOR VERSION>/PlaybackEngines/AndroidPlayer/NDK/`
+  * `/Applications/Unity/Hub/Editor/2021.3.23f1/PlaybackEngines/AndroidPlayer/NDK/`
+
+Got min sdk version and ABI from project export
+
+```
+cmake .. \
+  -DANDROID_PLATFORM=android-22 \
+  -DANDROID_ABI=armeabi-v7a \
+  -DCMAKE_TOOLCHAIN_FILE=/Applications/Unity/Hub/Editor/2021.3.23f1/PlaybackEngines/AndroidPlayer/NDK/build/cmake/android.toolchain.cmake \
+  -DRNBO_EXPORT_DIR=/Users/xnor/Documents/export/simple-freq-param-DRNBO_CPP_DIR \
+  -DRNBO_CPP_DIR=/Users/xnor/Documents/export/simple-freq-param/rnbo -DPLUGIN_NAME="Simple Freq Param" 
+```
+
 
 ## Resources
 
