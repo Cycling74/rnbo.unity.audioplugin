@@ -105,14 +105,14 @@ If you've installed the NDK via Unity Hub, you should be able to find it here:
   * `/Applications/Unity/Hub/Editor/<YOUR EDITOR VERSION>/PlaybackEngines/AndroidPlayer/NDK/`
   * `/Applications/Unity/Hub/Editor/2021.3.23f1/PlaybackEngines/AndroidPlayer/NDK/`
 
-Got min sdk version and ABI from project export
+Occulus
 
 ```
 cmake .. \
-  -DANDROID_PLATFORM=android-22 \
-  -DANDROID_ABI=armeabi-v7a \
+  -DANDROID_PLATFORM=android-29 \
+  -DANDROID_ABI=arm64-v8a \
   -DCMAKE_TOOLCHAIN_FILE=/Applications/Unity/Hub/Editor/2021.3.23f1/PlaybackEngines/AndroidPlayer/NDK/build/cmake/android.toolchain.cmake \
-  -DRNBO_EXPORT_DIR=/Users/xnor/Documents/export/simple-freq-param-DRNBO_CPP_DIR \
+  -DRNBO_EXPORT_DIR=/Users/xnor/Documents/export/simple-freq-param \
   -DRNBO_CPP_DIR=/Users/xnor/Documents/export/simple-freq-param/rnbo -DPLUGIN_NAME="Simple Freq Param" 
 ```
 
