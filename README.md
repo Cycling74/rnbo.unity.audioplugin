@@ -97,6 +97,48 @@ Everything in this entry, including the word `"paramConversion"`, everything in 
 
 Then, save the file and proceed with the instructions in this README for building your RNBO Plugin.
 
+### Building for Android
+
+If you've installed the NDK via Unity Hub, you should be able to find it here:
+
+* On MacOS:
+  * `/Applications/Unity/Hub/Editor/<YOUR EDITOR VERSION>/PlaybackEngines/AndroidPlayer/NDK/`
+  * eg: `/Applications/Unity/Hub/Editor/2021.3.23f1/PlaybackEngines/AndroidPlayer/NDK/`
+
+The NDK includes a CMake **toolchain** file, which makes our life easy.
+You simply provide the `CMAKE_TOOLCHAIN_FILE`, `ANDROID_PLATFORM` and `ANDROID_ABI` settings in addition to your other CMake parameters.
+
+The `ANDROID_PLATFORM` is the minimum Android version you would like to target.
+The `ANDROID_ABI` is the CPU binary interface that your plugin should target. See [the NDK ABIs Guide](https://developer.android.com/ndk/guides/abis) for more info.
+
+For instance, I wanted to build and run on the `Oculus Quest 2`, the documentation says to use a minimum android version of `29` and `arm64-v8a` as the `ABI`.
+
+```
+mkdir build && cd build
+cmake .. \
+  -DANDROID_PLATFORM=android-29 \
+  -DANDROID_ABI=arm64-v8a \
+  -DCMAKE_TOOLCHAIN_FILE=/Applications/Unity/Hub/Editor/2021.3.23f1/PlaybackEngines/AndroidPlayer/NDK/build/cmake/android.toolchain.cmake \
+  -DRNBO_EXPORT_DIR=/Users/xnor/Documents/export/simple-freq-param \
+  -DRNBO_CPP_DIR=/Users/xnor/Documents/export/simple-freq-param/rnbo -DPLUGIN_NAME="Simple Freq Param" 
+cmake --build .
+```
+
+Once you've built your package, you'll probably want to build a native version so you can load the plugin in your editor, then copy that into the package you built above.
+
+```
+mkdir build-native && cd build-native
+cmake .. \
+  -DRNBO_EXPORT_DIR=/Users/xnor/Documents/export/simple-freq-param \
+  -DRNBO_CPP_DIR=/Users/xnor/Documents/export/simple-freq-param/rnbo -DPLUGIN_NAME="Simple Freq Param" 
+cmake --build .
+cp -r SimpleFreqParam/Assets/Plugins/Darwin ../build/SimpleFreqParam/Assets/Plugins/
+```
+
+Then install your package into your Unity project. In the inspector, you will need to set the plugins to load on startup,
+and you'll also likely need to update the `Android` plugin details to only load on `Android` 
+and potentially update the `CPU` entry for the Android plugin. I needed to change mine to `ARM64` for the Oculus.
+
 
 ## Resources
 

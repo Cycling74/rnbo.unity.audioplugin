@@ -4,7 +4,7 @@ set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options a
 set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "")
 
 project(RNBO_UNITY_NATIVE_AUDIO_PLUGIN
-	VERSION 0.0.1
+	VERSION 0.0.2
 	LANGUAGES CXX
 )
 
@@ -39,36 +39,63 @@ rnbo_write_description_header_if_exists(${RNBO_DESCRIPTION_FILE} ${DESCRIPTION_I
 #compute bundle id
 STRING(REGEX REPLACE "[^A-Za-z0-9]" "" PLUGIN_NAME_ID ${PLUGIN_NAME})
 STRING(REGEX REPLACE "[^A-Za-z0-9]" "" PLUGIN_MANUFACTURER_NAME_ID ${PLUGIN_MANUFACTURER_NAME})
-STRING(TOLOWER  ${PLUGIN_NAME_ID} PLUGIN_NAME_LOWER_ID)
-STRING(TOLOWER  ${PLUGIN_MANUFACTURER_NAME_ID} PLUGIN_MANUFACTURER_NAME_LOWER_ID)
+STRING(TOLOWER ${PLUGIN_NAME_ID} PLUGIN_NAME_LOWER_ID)
+STRING(TOLOWER ${PLUGIN_MANUFACTURER_NAME_ID} PLUGIN_MANUFACTURER_NAME_LOWER_ID)
 
 set(PACKAGE_DIR ${CMAKE_BINARY_DIR}/${PLUGIN_NAME_ID})
 
-# Test platform and 
+# Test platform and bit depth
+set(BIT_DEPTH 64)
 if (NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-  message(FATAL "RNBOUnityPlugin currently only supports 64-bit platforms")
+	set(BIT_DEPTH 32)
 endif()
 
-if (${CMAKE_SYSTEM_NAME} STREQUAL Linux)
-  set(PLUGIN_UNITY_PLATFORM_NAME "LinuxStandalone64")
-elseif (${CMAKE_SYSTEM_NAME} STREQUAL Windows)
-  set(PLUGIN_UNITY_PLATFORM_NAME "WindowsStandalone64")
-elseif (${CMAKE_SYSTEM_NAME} STREQUAL Darwin)
-  set(PLUGIN_UNITY_PLATFORM_NAME "macOSStandalone")
-else()
-  message(FATAL "${CMAKE_SYSTEM_NAME} not yet supported for RNBOUnityPlugin")
-endif()
+#platforms:
+#macOSStandalone
+#WindowsStandalone32
+#WindowsStandalone64
+#LinuxStandalone32
+#LinuxStandalone64
+#LinuxStandaloneUniversal
+#iOS
+#Android
+#WebGL
+#WSA
+#Tizen
+#PSVita
+#PS4
+#PSMobile
+#XboxOne
+#Nintendo3DS
+#WiiU
+#tvOS
+#Switch
 
 set(PLUGIN_DIR ${PACKAGE_DIR}/Assets/Plugins/${CMAKE_SYSTEM_NAME}/)
+
+if (${CMAKE_SYSTEM_NAME} STREQUAL Linux)
+	set(PLUGIN_UNITY_PLATFORM_NAME "LinuxStandalone${BIT_DEPTH}")
+elseif (${CMAKE_SYSTEM_NAME} STREQUAL Windows)
+	set(PLUGIN_UNITY_PLATFORM_NAME "WindowsStandalone${BIT_DEPTH}")
+elseif (${CMAKE_SYSTEM_NAME} STREQUAL Darwin)
+	set(PLUGIN_UNITY_PLATFORM_NAME "macOSStandalone")
+elseif (${CMAKE_SYSTEM_NAME} STREQUAL Android)
+	set(PLUGIN_UNITY_PLATFORM_NAME "Android")
+	set(PLUGIN_DIR ${PLUGIN_DIR}/libs/${ANDROID_ABI}/)
+else()
+	message(FATAL "${CMAKE_SYSTEM_NAME} not yet supported for RNBOUnityPlugin")
+endif()
+
+message(STATUS "building for ${PLUGIN_UNITY_PLATFORM_NAME} with bit depth ${BIT_DEPTH}")
 
 add_library(RNBOUnityPlugin MODULE)
 
 set_target_properties(RNBOUnityPlugin PROPERTIES
-  #generic
-  LIBRARY_OUTPUT_DIRECTORY ${PLUGIN_DIR}
-	OUTPUT_NAME ${PLUGIN_NAME}
+	#generic
+	LIBRARY_OUTPUT_DIRECTORY ${PLUGIN_DIR}
+	OUTPUT_NAME ${PLUGIN_NAME_ID}
 
-  #macos
+	#macos
 	BUNDLE TRUE
 	BUNDLE_EXTENSION bundle
 	XCODE_ATTRIBUTE_WRAPPER_EXTENSION bundle
@@ -78,7 +105,7 @@ set_target_properties(RNBOUnityPlugin PROPERTIES
 
 	#plist
 	MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_LIST_DIR}/src/Info.plist.in
-	MACOSX_BUNDLE_BUNDLE_NAME ${PLUGIN_NAME}
+	MACOSX_BUNDLE_BUNDLE_NAME ${PLUGIN_NAME_ID}
 	MACOSX_BUNDLE_GUI_IDENTIFIER ${PLUGIN_MANUFACTURER_TLD}.${PLUGIN_MANUFACTURER_NAME_ID}.${PLUGIN_NAME_ID}
 	MACOSX_BUNDLE_COPYRIGHT ${PLUGIN_MANUFACTURER_NAME}
 	MACOSX_BUNDLE_LONG_VERSION_STRING ${PLUGIN_VERSION}
