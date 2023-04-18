@@ -35,9 +35,12 @@ public class DrumKit : MonoBehaviour
         myQuantizedBuffersPlugin.SetTimeSignature(timeSignatureNumerator, timeSignatureDenominator);
         myQuantizedBuffersPlugin.SetBeatTime(beatTime);
     }
-
-
 }
 ```
 
+## Synchronizing multiple RNBO plugins
+
+The `BeatTimeEvent` can also be an effective means to synchronize multiple RNBO plugins — schedule such an event that sets your plugins to the same BeatTime, and, given that the plugins also share a Tempo and Time Signature, they should be in sync.
+
+- Next: [Loading and Storing Presets](PRESETS.md)
 - Back to the [Table of Contents](README.md#table-of-contents)
