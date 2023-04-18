@@ -24,7 +24,7 @@ adapter code you need to convert your RNBO C++ export into a plugin that you can
 
 ### File Structure and Building
 
-If you are on Windows, see some important [Building on Windows](#building-on-windows) notes below.
+If you are on Windows, see some important [Building on Windows](#building-on-windows) notes below. You can also find some notes that are [Android-specific](#building-for-android-including-the-quest-2) if you are using that platform (for example, to build a VR project for the Oculus Quest).
 
 The source code of the Plugin itself is in the `src/` directory. In general use of this repository, you shouldn't need to change anything in that directory.
 
@@ -97,13 +97,16 @@ Everything in this entry, including the word `"paramConversion"`, everything in 
 
 Then, save the file and proceed with the instructions in this README for building your RNBO Plugin.
 
-### Building for Android
+### Building for Android (including the Quest 2)
 
 If you've installed the NDK via Unity Hub, you should be able to find it here:
 
-* On MacOS:
+* On macOS:
   * `/Applications/Unity/Hub/Editor/<YOUR EDITOR VERSION>/PlaybackEngines/AndroidPlayer/NDK/`
   * eg: `/Applications/Unity/Hub/Editor/2021.3.23f1/PlaybackEngines/AndroidPlayer/NDK/`
+* On Windows:
+  * `C:\Program Files\Unity\Hub\Editor\<YOUR EDITOR VERSION>\Editor\Data\PlaybackEngines\AndroidPlayer\NDK`
+  * eg: `C:\Program Files\Unity\Hub\Editor\2021.3.23f1\Editor\Data\PlaybackEngines\AndroidPlayer\NDK`
 
 The NDK includes a CMake **toolchain** file, which makes our life easy.
 You simply provide the `CMAKE_TOOLCHAIN_FILE`, `ANDROID_PLATFORM` and `ANDROID_ABI` settings in addition to your other CMake parameters.
@@ -111,7 +114,9 @@ You simply provide the `CMAKE_TOOLCHAIN_FILE`, `ANDROID_PLATFORM` and `ANDROID_A
 The `ANDROID_PLATFORM` is the minimum Android version you would like to target.
 The `ANDROID_ABI` is the CPU binary interface that your plugin should target. See [the NDK ABIs Guide](https://developer.android.com/ndk/guides/abis) for more info.
 
-For instance, I wanted to build and run on the `Oculus Quest 2`, the documentation says to use a minimum android version of `29` and `arm64-v8a` as the `ABI`.
+For instance, if you want to build and run on the `Oculus Quest 2`, the documentation says to use a minimum android version of `29` and `arm64-v8a` as the `ABI`. 
+
+The example below demonstrates this with a macOS user account called `xnor`.
 
 ```
 mkdir build && cd build
@@ -137,7 +142,7 @@ cp -r SimpleFreqParam/Assets/Plugins/Darwin ../build/SimpleFreqParam/Assets/Plug
 
 Then install your package into your Unity project. In the inspector, you will need to set the plugins to load on startup,
 and you'll also likely need to update the `Android` plugin details to only load on `Android` 
-and potentially update the `CPU` entry for the Android plugin. I needed to change mine to `ARM64` for the Oculus.
+and potentially update the `CPU` entry for the Android plugin. For example, you will need to change this entry to `ARM64` for the Quest 2.
 
 
 ## Resources
@@ -153,5 +158,5 @@ and potentially update the `CPU` entry for the Android plugin. I needed to chang
 
 ## TODO
 
-* Support additional platforms. Currently we only support MacOS, 64-bit Linux and 64-bit Windows.
+* Support additional platforms. Currently we support MacOS, 64-bit Linux, 64-bit Windows, and Android (including the Quest 2).
 * Async Preset Capture
