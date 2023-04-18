@@ -1,7 +1,9 @@
 // Copyright (c) 2023 Cycling '74
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading;
+using UnityEngine;
 
 namespace Cycling74.RNBOTypes {
 
@@ -167,72 +169,8 @@ namespace Cycling74.RNBOTypes {
         public List<PresetEntry> presets;
     }
 
-    public struct TransportChanges {
-        public bool RunningChanged { get; private set; } = false;
-        public bool TempoChanged { get; private set; } = false;
-        public bool BeatTimeChanged { get; private set; } = false;
-        public bool TimeSignatureChanged { get; private set; } = false;
-
-        bool _running;
-        Float _tempo;
-        Float _beatTime;
-        (int, int) _timeSignature;
-
-        TransportChanges() {
-            _running = false;
-            _tempo  = 0.0;
-            _beatTime = 0.0;
-            _timeSignature = (4, 4);
-        }
-        
-        public bool Running {
-            get => _running; 
-            internal set {
-                if (value != _running) {
-                    _running = value;
-                    RunningChanged = true;
-                } else {
-                    RunningChanged = false;
-                }
-            }
-        }
-
-        public Float Tempo {
-            get => _tempo; 
-            internal set {
-                if (value != _tempo) {
-                    _tempo = value;
-                    TempoChanged = true;
-                } else {
-                    TempoChanged = false;
-                }
-            }
-        }
-
-        public Float BeatTime {
-            get => _beatTime; 
-            internal set {
-                if (value != _beatTime) {
-                    _beatTime = value;
-                    BeatTimeChanged = true;
-                } else {
-                    BeatTimeChanged = false;
-                }
-            }
-        }
-
-        public (int, int) TimeSignature {
-            get => _timeSignature; 
-            internal set {
-                if (value != _timeSignature) {
-                    _timeSignature = value;
-                    TimeSignatureChanged = true;
-                } else {
-                    TimeSignatureChanged = false;
-                }
-            }
-        }
-    }
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    public delegate void TransportRequestDelegate(MillisecondTime time, out bool running, out Float bpm, out Float beatTime, out int timeSigNum, out int timeSigDenom);
 
     public class Transport {
         public bool Running { get; set; } = true;
@@ -241,49 +179,37 @@ namespace Cycling74.RNBOTypes {
         public (int, int) TimeSignature { get; set; } = (4, 4);
 
         double _lastUpdate = -1.0;
-        public double? LastUpdate { 
-            get => {
-                var v = _lastUpdate;
-                return v >= 0.0 ? v : null; 
-            }
-        }
-
-        TransportChanges _changes = new TransportChanges();
 
         Float _seekTo = -1.0;
-        public SeekTo(Float beatTime) {
-            if (beatTime >= 0.0) {
-                Interlocked.Exchange(_seekTo, beatTime);
-            }
+        public void SeekTo(Float beatTime) {
+            Interlocked.Exchange(ref _seekTo, beatTime < 0.0 ? 0.0 : beatTime);
         }
 
-        //update in the AudioThread
-        public TransportChanges Update() {
-            var now = AudioSettings.dspTime;
-            if (now != _lastUpdate) {
-                _lastUpdate = now;
-
-                var running = Running;
-                var tempo = Tempo;
-                var beatTime = BeatTime;
-                var sig = TimeSignature;
-
-                var seek = Interlocked.Exchange(_seekTo, -1.0);
+        bool runningLast = true;
+        Float tempoLast = 100.0;
+        Float beatTimeLast = 0.0;
+        (int, int) timeSignatureLast = (4, 4);
+        
+        public void AudioThreadUpdate(MillisecondTime time, out bool run, out Float tempo, out Float beatTime, out int timeSigNum, out int timeSigDenom) {
+            if (time != _lastUpdate) {
+                _lastUpdate = time;
+                var seek = Interlocked.Exchange(ref _seekTo, -1.0);
                 if (seek >= 0.0) {
-                    beatTime = seek;
+                    beatTimeLast = seek;
                 } else if (_lastUpdate >= 0.0) {
-                    //advance beat time
+                    //TODO advance beat time
+                    beatTimeLast = BeatTime;
                 }
-                //XXX do we need to interlock?
-                BeatTime  = beatTime;
-
-                _changes.Running = running;
-                _changes.Tempo = tempo;
-                _changes.BeatTime = beatTime;
-                _changes.TimeSignature = sig;
+                runningLast = Running;
+                tempoLast = Tempo;
+                timeSignatureLast = TimeSignature;
             }
-            return _changes;
-        }
 
+            run = runningLast;
+            tempo = tempoLast;
+            beatTime = beatTimeLast;
+            timeSigNum = timeSignatureLast.Item1;
+            timeSigDenom = timeSignatureLast.Item2;
+        }
     }
 }

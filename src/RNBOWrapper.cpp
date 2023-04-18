@@ -22,6 +22,8 @@ extern "C" {
 	typedef void (UNITY_AUDIODSP_CALLBACK * CTempoEventCallback)(RNBO::number, RNBO::MillisecondTime);
 	typedef void (UNITY_AUDIODSP_CALLBACK * CBeatTimeEventCallback)(RNBO::number, RNBO::MillisecondTime);
 	typedef void (UNITY_AUDIODSP_CALLBACK * CTimeSignatureEventCallback)(int32_t, int32_t, RNBO::MillisecondTime);
+
+	typedef void (UNITY_AUDIODSP_CALLBACK * CTransportRequestCallback)(RNBO::MillisecondTime time, bool* running, RNBO::number* bpm, RNBO::number* beatTime, int32_t *timeSigNum, int32_t *timeSigDenom);
 }
 
 namespace RNBOUnity
@@ -183,11 +185,21 @@ namespace RNBOUnity
 
 	const int32_t invalidKey = 0;
 	const int32_t maxKey = 16777216;
+    
+	static std::atomic<CTransportRequestCallback> globalTransportCallback = nullptr;
 
 	struct InnerData {
 			UnityEventHandler mEventHandler;
 			RNBO::CoreObject mCore;
 			int32_t mInstanceKey = invalidKey;
+
+			std::atomic<CTransportRequestCallback> mTransportCallback = nullptr;
+			
+			bool mTransportRunning = false;
+			RNBO::number mTransportBPM = 0.0;
+			RNBO::number mTransportBeatTime = -1.0;
+			int32_t mTransportTimeSigNum = 0;
+			int32_t mTransportTimeSigDenom = 0;
 
 			InnerData() : mCore(&mEventHandler) {}
 	};
@@ -244,11 +256,56 @@ namespace RNBOUnity
 			return UNITY_AUDIODSP_OK;
 		}
 
-		const RNBO::MillisecondTime stoms = 1000.0;
-		RNBO::MillisecondTime ms = stoms * (static_cast<RNBO::MillisecondTime>(state->currdsptick) / static_cast<RNBO::MillisecondTime>(state->samplerate));
+		auto& inner = effectdata->inner;
 
-		effectdata->inner.mCore.setCurrentTime(ms);
-		effectdata->inner.mCore.process(inbuffer, inchannels, outbuffer, outchannels, length, nullptr, nullptr);
+		const RNBO::MillisecondTime stoms = 1000.0;
+		RNBO::MillisecondTime now = stoms * (static_cast<RNBO::MillisecondTime>(state->currdsptick) / static_cast<RNBO::MillisecondTime>(state->samplerate));
+		inner.mCore.setCurrentTime(now);
+
+        //sync to transport
+		CTransportRequestCallback transport = inner.mTransportCallback.load();
+		if (transport == nullptr)
+			transport = globalTransportCallback.load();
+
+    if (transport != nullptr) {
+			bool running = false;
+			RNBO::number bpm = 0.0, beatTime = 0.0;
+			int32_t timeSigNum = 4, timeSigDenom = 4;
+
+			transport(now, &running, &bpm, &beatTime, &timeSigNum, &timeSigDenom);
+			
+			if (running != inner.mTransportRunning) {
+				inner.mTransportRunning = running;
+
+				RNBO::TransportEvent event(now, running ? RNBO::TransportState::RUNNING : RNBO::TransportState::STOPPED);
+				inner.mCore.scheduleEvent(event);
+			}
+
+			if (bpm != inner.mTransportBPM) {
+				inner.mTransportBPM = bpm;
+
+				RNBO::TempoEvent event(now, bpm);
+				inner.mCore.scheduleEvent(event);
+			}
+
+			if (beatTime != inner.mTransportBeatTime) {
+				inner.mTransportBeatTime = beatTime;
+
+				RNBO::BeatTimeEvent event(now, beatTime);
+				inner.mCore.scheduleEvent(event);
+			}
+
+			if (timeSigNum != inner.mTransportTimeSigNum || timeSigDenom != inner.mTransportTimeSigDenom) {
+				inner.mTransportTimeSigNum = timeSigNum;
+				inner.mTransportTimeSigDenom = timeSigDenom;
+
+				RNBO::TimeSignatureEvent event(now, timeSigNum, timeSigDenom);
+				inner.mCore.scheduleEvent(event);
+			}
+
+		}
+
+		inner.mCore.process(inbuffer, inchannels, outbuffer, outchannels, length, nullptr, nullptr);
 
 		return UNITY_AUDIODSP_OK;
 	}
@@ -740,6 +797,18 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterT
 						callback(static_cast<int32_t>(event.getNumerator()), static_cast<int32_t>(event.getDenominator()), event.getTime());
 					}
 			});
+	});
+}
+
+extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBORegisterGlobalTransportRequestCallback(CTransportRequestCallback callback)
+{
+	RNBOUnity::globalTransportCallback.store(callback);
+}
+
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTransportRequestCallback(int32_t key, CTransportRequestCallback callback)
+{
+	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
+			inner->mTransportCallback.store(callback);
 	});
 }
 

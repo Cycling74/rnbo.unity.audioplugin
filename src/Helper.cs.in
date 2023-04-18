@@ -82,6 +82,12 @@ public class ${PLUGIN_NAME_ID}Handle {
     [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
     private static extern bool RNBORegisterTimeSignatureEventCallback(int key, IntPtr callback);
 
+    [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
+    private static extern bool RNBORegisterGlobalTransportRequestCallback(IntPtr callback);
+
+    [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
+    private static extern bool RNBORegisterTransportRequestCallback(int key, IntPtr callback);
+
     [DllImport("${PLUGIN_NAME_ID}")]
     private static extern bool RNBOSendMessageBang(int key, MessageTag tag, MillisecondTime atTime);
 
@@ -513,6 +519,19 @@ public class ${PLUGIN_NAME_ID}Handle {
         };
         var r = RNBORegisterTimeSignatureEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(d));
         registeredTimeSignatureEventDelegate = d;
+        return r;
+    }
+
+    private static TransportRequestDelegate registeredGlobalTransportRequestDelegate;
+    public static void RegisterGlobalTransportRequestDelegate(TransportRequestDelegate cb) {
+        RNBORegisterGlobalTransportRequestCallback(Marshal.GetFunctionPointerForDelegate(cb));
+        registeredGlobalTransportRequestDelegate = cb;
+    }
+
+    private TransportRequestDelegate registeredTransportRequestDelegate;
+    public bool RegisterTransportRequestDelegate(TransportRequestDelegate cb) {
+        var r = RNBORegisterTransportRequestCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(cb));
+        registeredTransportRequestDelegate = cb;
         return r;
     }
 }
