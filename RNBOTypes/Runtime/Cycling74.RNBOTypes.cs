@@ -169,14 +169,54 @@ namespace Cycling74.RNBOTypes {
         public List<PresetEntry> presets;
     }
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    public delegate void TransportRequestDelegate(MillisecondTime time, out bool running, out Float bpm, out Float beatTime, out int timeSigNum, out int timeSigDenom);
-
     public class Transport {
-        public bool Running { get; set; } = true;
-        public Float Tempo { get; set; } = 100.0;
-        public Float BeatTime { get; private set; } = 0.0;
-        public (int, int) TimeSignature { get; set; } = (4, 4);
+
+        public static Transport Global { get; } = new Transport();
+
+        bool _running = true;
+        Float _tempo = 100.0;
+        Float _beatTime = 0.0;
+        //using a single 32 bit number to represent 2 16bit numbers, so we can be atomic
+        //would use UInt32 but the version of .net or whatever it is doesn't support it 
+        Int32 _timeSignature = 4 << 16 | 4;
+
+        public bool Running {
+            get => _running;
+            set => _running = value;
+        }
+
+        //there is no Interlocked.Load but CompareExchange returns the value so we simply compare against zero and then set to zero
+        public Float Tempo { 
+            get => Interlocked.CompareExchange(ref _tempo, 0.0, 0.0); 
+            set {
+                if (value < 0.0) {
+                    throw new ArgumentOutOfRangeException("Tempo can only be positive");
+                }
+                Interlocked.Exchange(ref _tempo, value);
+            }
+        }
+        public Float BeatTime { 
+            get => Interlocked.CompareExchange(ref _beatTime, 0.0, 0.0); 
+            set {
+                if (value < 0.0) {
+                    throw new ArgumentOutOfRangeException("BeatTime can only be positive");
+                }
+                Interlocked.Exchange(ref _beatTime, value);
+            }
+        }
+        public (UInt16, UInt16) TimeSignature { 
+            get {
+                var cur = unchecked((UInt32)_timeSignature); //supposedly this is already atomic
+                return ((UInt16)(cur >> 16), (UInt16)(cur & 0xFFFF));
+            }
+            set {
+                if (value.Item1 == 1 || value.Item2 == 0) {
+                    throw new ArgumentOutOfRangeException("Both Numerator and Denominator of TimeSignature must be non-zero");
+                }
+                UInt32 v = unchecked((UInt32)(value.Item1) << 16 | (UInt32)(value.Item2));
+                Interlocked.Exchange(ref _timeSignature, (Int32)v);
+            }
+        }
 
         double _lastUpdate = -1.0;
 
@@ -185,31 +225,41 @@ namespace Cycling74.RNBOTypes {
             Interlocked.Exchange(ref _seekTo, beatTime < 0.0 ? 0.0 : beatTime);
         }
 
-        bool runningLast = true;
-        Float tempoLast = 100.0;
-        Float beatTimeLast = 0.0;
-        (int, int) timeSignatureLast = (4, 4);
+        //only to be accessed from audio thread
+        bool runningCur = true;
+        Float tempoCur = 100.0;
+        Float beatTimeCur = 0.0;
+        (UInt16, UInt16) timeSignatureCur = (4, 4);
         
         public void AudioThreadUpdate(MillisecondTime time, out bool run, out Float tempo, out Float beatTime, out int timeSigNum, out int timeSigDenom) {
             if (time != _lastUpdate) {
                 _lastUpdate = time;
+
+                runningCur = Running;
+                tempoCur = Tempo;
+                timeSignatureCur = TimeSignature;
+
                 var seek = Interlocked.Exchange(ref _seekTo, -1.0);
                 if (seek >= 0.0) {
-                    beatTimeLast = seek;
-                } else if (_lastUpdate >= 0.0) {
-                    //TODO advance beat time
-                    beatTimeLast = BeatTime;
+                    beatTimeCur = seek;
+                } else {
+                    //advance beat time
+                    beatTimeCur = BeatTime;
+
+                    MillisecondTime offset = time - Math.Max(0.0, _lastUpdate);
+                    //it is an error if offset is negative
+                    if (offset > 0.0) {
+                        //mstobeats from rnbo
+                        beatTimeCur += offset * tempoCur * 0.008 / 480.0;
+                    }
                 }
-                runningLast = Running;
-                tempoLast = Tempo;
-                timeSignatureLast = TimeSignature;
             }
 
-            run = runningLast;
-            tempo = tempoLast;
-            beatTime = beatTimeLast;
-            timeSigNum = timeSignatureLast.Item1;
-            timeSigDenom = timeSignatureLast.Item2;
+            run = runningCur;
+            tempo = tempoCur;
+            beatTime = beatTimeCur;
+            timeSigNum = (int)timeSignatureCur.Item1;
+            timeSigDenom = (int)timeSignatureCur.Item2;
         }
     }
 }

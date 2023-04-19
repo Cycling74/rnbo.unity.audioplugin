@@ -522,16 +522,27 @@ public class ${PLUGIN_NAME_ID}Handle {
         return r;
     }
 
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate void TransportRequestDelegate(MillisecondTime time, out bool running, out Float bpm, out Float beatTime, out int timeSigNum, out int timeSigDenom);
+
+    private static Transport registeredGlobalTransport;
     private static TransportRequestDelegate registeredGlobalTransportRequestDelegate;
-    public static void RegisterGlobalTransportRequestDelegate(TransportRequestDelegate cb) {
-        RNBORegisterGlobalTransportRequestCallback(Marshal.GetFunctionPointerForDelegate(cb));
-        registeredGlobalTransportRequestDelegate = cb;
+    public static void RegisterGlobalTransport(Transport transport) {
+        TransportRequestDelegate d = transport.AudioThreadUpdate;
+
+        RNBORegisterGlobalTransportRequestCallback(Marshal.GetFunctionPointerForDelegate(d));
+        registeredGlobalTransport = transport;
+        registeredGlobalTransportRequestDelegate = d;
     }
 
+    private Transport registeredTransport;
     private TransportRequestDelegate registeredTransportRequestDelegate;
-    public bool RegisterTransportRequestDelegate(TransportRequestDelegate cb) {
-        var r = RNBORegisterTransportRequestCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(cb));
-        registeredTransportRequestDelegate = cb;
+    public bool RegisterTransport(Transport transport) {
+        TransportRequestDelegate d = transport.AudioThreadUpdate;
+
+        var r = RNBORegisterTransportRequestCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(d));
+        registeredTransport = transport;
+        registeredTransportRequestDelegate = d;
         return r;
     }
 }
