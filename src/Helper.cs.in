@@ -567,20 +567,28 @@ public class ${PLUGIN_NAME_ID}Handle {
     }
 
     public static void RegisterGlobalTransport(Transport transport) {
-        //create a new object so we have a unique holder to release later
-        RegisteredTransport t = new RegisteredTransport(transport);
-        RNBORegisterGlobalTransportRequestCallback(t.Ptr);
-        RegisterTransportDelegate(t.Ptr, t);
+        if (transport == null) {
+            RNBORegisterGlobalTransportRequestCallback(IntPtr.Zero);
+        } else {
+            //create a new object so we have a unique holder to release later
+            RegisteredTransport t = new RegisteredTransport(transport);
+            RNBORegisterGlobalTransportRequestCallback(t.Ptr);
+            RegisterTransportDelegate(t.Ptr, t);
+        }
     }
 
     public bool RegisterTransport(Transport transport) {
-        //create a new object so we have a unique holder to release later
-        RegisteredTransport t = new RegisteredTransport(transport);
-        var r = RNBORegisterTransportRequestCallback(PluginKey, t.Ptr);
-        if (r) {
-            RegisterTransportDelegate(t.Ptr, t);
+        if (transport == null) {
+            return RNBORegisterTransportRequestCallback(PluginKey, IntPtr.Zero);
+        } else {
+            //create a new object so we have a unique holder to release later
+            RegisteredTransport t = new RegisteredTransport(transport);
+            var r = RNBORegisterTransportRequestCallback(PluginKey, t.Ptr);
+            if (r) {
+                RegisterTransportDelegate(t.Ptr, t);
+            }
+            return r;
         }
-        return r;
     }
 }
 
