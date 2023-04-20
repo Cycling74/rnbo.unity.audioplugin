@@ -12,6 +12,7 @@ In these guides, we'll discuss the basics of adding your RNBO device as a plugin
 ### [Buffers and File Dependencies](BUFFERS.md)
 ### [Sending and Receiving Messages](MESSAGES.md)
 ### [Events related to Musical Time](TRANSPORT_TEMPO.md)
+### [Synchronizing multiple RNBO plugins](GLOBAL_TRANSPORT.md)
 ### [Loading and Storing Presets](PRESETS.md)
 ### [Sending MIDI Messages](MIDI.md)
 ### [Making a Custom Filter](CUSTOM_FILTER.md)
