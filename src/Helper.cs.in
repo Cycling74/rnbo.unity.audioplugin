@@ -82,6 +82,12 @@ public class ${PLUGIN_NAME_ID}Handle {
     [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
     private static extern bool RNBORegisterTimeSignatureEventCallback(int key, IntPtr callback);
 
+    [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
+    private static extern bool RNBORegisterGlobalTransportRequestCallback(IntPtr callback);
+
+    [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
+    private static extern bool RNBORegisterTransportRequestCallback(int key, IntPtr callback);
+
     [DllImport("${PLUGIN_NAME_ID}")]
     private static extern bool RNBOSendMessageBang(int key, MessageTag tag, MillisecondTime atTime);
 
@@ -120,6 +126,9 @@ public class ${PLUGIN_NAME_ID}Handle {
 
     [DllImport("${PLUGIN_NAME_ID}")]
     private static extern void RNBOFreePreset(IntPtr payloadPtr);
+
+    [DllImport("${PLUGIN_NAME_ID}")]
+    private static extern IntPtr RNBOReleaseTransportRequests();
 
 
     private static PatcherDescription patcherDescription;
@@ -239,10 +248,19 @@ public class ${PLUGIN_NAME_ID}Handle {
     public int PluginKey {
         get; internal set;
     }
+
+    void ReleaseTransportRequests() {
+        var r = RNBOReleaseTransportRequests();
+        while (!r.Equals(IntPtr.Zero)) {
+            TryReleaseTransportDelegate(r);
+            r = RNBOReleaseTransportRequests();
+        }
+    }
     
     public void Update() {
         RegisterIfNeeded();
         RNBOPoll(PluginKey);
+        ReleaseTransportRequests();
     }
 
     public MillisecondTime Now {
@@ -514,6 +532,63 @@ public class ${PLUGIN_NAME_ID}Handle {
         var r = RNBORegisterTimeSignatureEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(d));
         registeredTimeSignatureEventDelegate = d;
         return r;
+    }
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate void TransportRequestDelegate(MillisecondTime time, out bool running, out Float bpm, out Float beatTime, out int timeSigNum, out int timeSigDenom);
+
+    //a transport holder, so we get a unique ptr for each registration
+    private class RegisteredTransport {
+        Transport _transport;
+        internal RegisteredTransport(Transport t) {
+            _transport = t;
+            Del = AudioThreadUpdate;
+            Ptr = Marshal.GetFunctionPointerForDelegate(Del);
+        }
+        internal TransportRequestDelegate Del { get; private set; }
+        internal IntPtr Ptr { get; private set; }
+
+        internal void AudioThreadUpdate(MillisecondTime time, out bool running, out Float bpm, out Float beatTime, out int timeSigNum, out int timeSigDenom) {
+            _transport.AudioThreadUpdate(time, out running, out bpm, out beatTime, out timeSigNum, out timeSigDenom);
+        }
+    }
+
+    private static Dictionary<IntPtr, RegisteredTransport> registeredTransports = new Dictionary<IntPtr, RegisteredTransport>();
+    private static void RegisterTransportDelegate(IntPtr functionPtr, RegisteredTransport transport) {
+        lock(registeredTransports) {
+            registeredTransports.Add(functionPtr, transport);
+        }
+    }
+
+    private static void TryReleaseTransportDelegate(IntPtr functionPtr) {
+        lock(registeredTransports) {
+            registeredTransports.Remove(functionPtr);
+        }
+    }
+
+    public static void RegisterGlobalTransport(Transport transport) {
+        if (transport == null) {
+            RNBORegisterGlobalTransportRequestCallback(IntPtr.Zero);
+        } else {
+            //create a new object so we have a unique holder to release later
+            RegisteredTransport t = new RegisteredTransport(transport);
+            RNBORegisterGlobalTransportRequestCallback(t.Ptr);
+            RegisterTransportDelegate(t.Ptr, t);
+        }
+    }
+
+    public bool RegisterTransport(Transport transport) {
+        if (transport == null) {
+            return RNBORegisterTransportRequestCallback(PluginKey, IntPtr.Zero);
+        } else {
+            //create a new object so we have a unique holder to release later
+            RegisteredTransport t = new RegisteredTransport(transport);
+            var r = RNBORegisterTransportRequestCallback(PluginKey, t.Ptr);
+            if (r) {
+                RegisterTransportDelegate(t.Ptr, t);
+            }
+            return r;
+        }
     }
 }
 

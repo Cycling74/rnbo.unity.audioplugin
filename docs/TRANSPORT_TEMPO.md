@@ -40,7 +40,83 @@ public class DrumKit : MonoBehaviour
 
 ## Synchronizing multiple RNBO plugins
 
-The `BeatTimeEvent` can also be an effective means to synchronize multiple RNBO plugins — schedule such an event that sets your plugins to the same BeatTime, and, given that the plugins also share a Tempo and Time Signature, they should be in sync.
+You can synchronize multiple plugins having them share a `Transport`, which you can either set globally per plugin export type, or per instance.
+
+So, for instance, if you wanted to synchronize instances of `QuantizedBuffers` plugins to a global transport, potentially shared by other plugins, you could do this:
+
+```c#
+using UnityEngine;
+using Cycling74.RNBOTypes;
+
+public class DrumKit : MonoBehaviour
+{
+    QuantizedBuffersHelper quantizedBuffersHelper;
+    QuantizedBuffersHandle myQuantizedBuffersPlugin;
+
+    const int instanceIndex = 1;
+
+    void Start ()
+    {
+        quantizedBuffersHelper = QuantizedBuffersHelper.FindById(instanceIndex);
+        myQuantizedBuffersPlugin = quantizedBuffersHelper.Plugin;
+
+        QuantizedBuffersHandle.RegisterGlobalTransport(Transport.Global);
+    }
+
+    void Update()
+    {
+
+        if (Input.GetKeyDown(KeyCode.U))
+        {
+            Transport.Global.Tempo += 2.0;
+        }
+    }
+}
+```
+
+But if you can also set a specific instance to have a separate transport:
+
+```c#
+using UnityEngine;
+using Cycling74.RNBOTypes;
+
+public class Foo : MonoBehaviour
+{
+    QuantizedBuffersHelper quantizedBuffersHelper;
+    QuantizedBuffersHandle myQuantizedBuffersPlugin;
+    Transport transport;
+
+    const int instanceIndex = 2;
+
+    void Start ()
+    {
+        transport = new Transport();
+        transport.Tempo = 200.0;
+
+        quantizedBuffersHelper = QuantizedBuffersHelper.FindById(instanceIndex);
+        myQuantizedBuffersPlugin = quantizedBuffersHelper.Plugin;
+
+        myQuantizedBuffersPlugin.RegisterTransport(transport);
+    }
+
+    void Update()
+    {
+
+        if (Input.GetKeyDown(KeyCode.U))
+        {
+            transport.Tempo += 2.0;
+        }
+    }
+}
+```
+
+If you have both of these scripts loaded in your project, and 2 or more `QuantizedBuffers` plugins in your mixer,
+you should have the one with `instanceIndex` 2 synced to a separate transport.
+Any other instance would be synchronized to `Transport.Global`, which is a default, global, transport that you can
+use if you want "global" synchronization.
+
+If you want to remove transport synchronization, you can send `null` to the `RegisterTransport` and or `RegisterGlobalTransport`.
+
 
 - Next: [Loading and Storing Presets](PRESETS.md)
 - Back to the [Table of Contents](README.md#table-of-contents)
