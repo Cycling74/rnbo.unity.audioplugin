@@ -218,7 +218,7 @@ namespace Cycling74.RNBOTypes {
             }
         }
 
-        double _lastUpdate = -1.0;
+        MillisecondTime _lastUpdate = -1.0;
 
         Float _seekTo = -1.0;
         public void SeekTo(Float beatTime) {
