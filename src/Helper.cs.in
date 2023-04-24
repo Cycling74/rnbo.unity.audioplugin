@@ -22,9 +22,6 @@ public class ${PLUGIN_NAME_ID}Handle {
     public event EventHandler<BeatTimeEventArgs> BeatTimeEvent;
     public event EventHandler<TimeSignatureEventArgs> TimeSignatureEvent;
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    private delegate void ReleaseDataRefDelegate(UIntPtr id);
-
     [DllImport("${PLUGIN_NAME_ID}")]
     private static extern IntPtr RNBOInstanceCreate(out int key);
 
@@ -65,28 +62,28 @@ public class ${PLUGIN_NAME_ID}Handle {
     private static extern bool RNBOGetParamValueNormalized(int key, ParameterIndex index, out ParameterValue value);
 
     [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
-    private static extern bool RNBORegisterParameterEventCallback(int key, IntPtr callback);
+    private static extern bool RNBORegisterParameterEventCallback(int key, IntPtr callback, IntPtr handle);
 
     [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
-    private static extern bool RNBORegisterMessageEventCallback(int key, IntPtr callback);
+    private static extern bool RNBORegisterMessageEventCallback(int key, IntPtr callback, IntPtr handle);
 
     [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
-    private static extern bool RNBORegisterTransportEventCallback(int key, IntPtr callback);
+    private static extern bool RNBORegisterTransportEventCallback(int key, IntPtr callback, IntPtr handle);
 
     [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
-    private static extern bool RNBORegisterTempoEventCallback(int key, IntPtr callback);
+    private static extern bool RNBORegisterTempoEventCallback(int key, IntPtr callback, IntPtr handle);
 
     [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
-    private static extern bool RNBORegisterBeatTimeEventCallback(int key, IntPtr callback);
+    private static extern bool RNBORegisterBeatTimeEventCallback(int key, IntPtr callback, IntPtr handle);
 
     [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
-    private static extern bool RNBORegisterTimeSignatureEventCallback(int key, IntPtr callback);
+    private static extern bool RNBORegisterTimeSignatureEventCallback(int key, IntPtr callback, IntPtr handle);
 
     [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
-    private static extern bool RNBORegisterGlobalTransportRequestCallback(IntPtr callback, IntPtr userData);
+    private static extern bool RNBORegisterGlobalTransportRequestCallback(IntPtr callback, IntPtr handle);
 
     [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
-    private static extern bool RNBORegisterTransportRequestCallback(int key, IntPtr callback);
+    private static extern bool RNBORegisterTransportRequestCallback(int key, IntPtr callback, IntPtr handle);
 
     [DllImport("${PLUGIN_NAME_ID}")]
     private static extern bool RNBOSendMessageBang(int key, MessageTag tag, MillisecondTime atTime);
@@ -205,6 +202,16 @@ public class ${PLUGIN_NAME_ID}Handle {
     private bool OwnsInstance => ownedInstance != (IntPtr)0;
 
     private int sampleRate;
+
+    GCHandle handle;
+    private IntPtr Handle {
+        get {
+            if (!handle.IsAllocated) {
+                handle = GCHandle.Alloc(this);
+            }
+            return GCHandle.ToIntPtr(handle);
+        }
+    }
     
     public ${PLUGIN_NAME_ID}Handle() {
         int key;
@@ -219,7 +226,7 @@ public class ${PLUGIN_NAME_ID}Handle {
         */
 
         sampleRate = AudioSettings.outputSampleRate;
-        //RegisterIfNeeded();
+        RegisterIfNeeded();
     }
     
     internal ${PLUGIN_NAME_ID}Handle(int key) {
@@ -230,6 +237,7 @@ public class ${PLUGIN_NAME_ID}Handle {
         if (OwnsInstance) {
             RNBOInstanceDestroy(ownedInstance);
         }
+        //TODO free handle
     }
 
     private bool registered = false;
@@ -260,7 +268,7 @@ public class ${PLUGIN_NAME_ID}Handle {
     }
     
     public void Update() {
-        //RegisterIfNeeded();
+        RegisterIfNeeded();
         RNBOPoll(PluginKey);
         ReleaseHandles();
     }
@@ -432,108 +440,111 @@ public class ${PLUGIN_NAME_ID}Handle {
         return r;
     }
 
-    //keep a reference to the callback so that it isn't garabage collected
-    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    private delegate void InternalParameterEventDelegate(ParameterIndex index, ParameterValue value, MillisecondTime time);
-    private InternalParameterEventDelegate registeredParameterEventDelegate;
+    private static ${PLUGIN_NAME_ID}Handle GetInstance(IntPtr handle) {
+        GCHandle gch = GCHandle.FromIntPtr(handle);
+        return (${PLUGIN_NAME_ID}Handle)gch.Target;
+    }
+
+    private delegate void ParameterEventDelegate(IntPtr handle, ParameterIndex index, ParameterValue value, MillisecondTime time);
+    [AOT.MonoPInvokeCallback(typeof(ParameterEventDelegate))]
+    private static void ParameterEventHandler(IntPtr handle, ParameterIndex index, ParameterValue value, MillisecondTime time) {
+        var inst = GetInstance(handle);
+        var e = inst?.ParameterChangedEvent;
+        if (e != null) {
+            //cast to int as it is easier to use for unity
+            e(inst, new ParameterChangedEventArgs((int)index, value, time));
+        }
+    }
+    private static ParameterEventDelegate parameterEventDelegate = ParameterEventHandler;
+
     private bool RegisterParameterEventDelegate() {
-        InternalParameterEventDelegate d = (index, value, time) => {
-            var e = ParameterChangedEvent;
-            if (e != null) {
-                //cast to int as it is easier to use for unity
-                e(this, new ParameterChangedEventArgs((int)index, value, time));
-            }
-        };
-        var r = RNBORegisterParameterEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(d));
-        registeredParameterEventDelegate = d;
-        return r;
+        return RNBORegisterParameterEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(parameterEventDelegate), Handle);
     }
 
-    //keep a reference to the callback so that it isn't garabage collected
-    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    private delegate void InternalMessageEventDelegate(MessageTag tag, IntPtr messageType, IntPtr valuesPtr, IntPtr valueCount, MillisecondTime time);
-    private InternalMessageEventDelegate registeredMessageEventDelegate;
+    private delegate void MessageEventDelegate(IntPtr handle, MessageTag tag, IntPtr messageType, IntPtr valuesPtr, IntPtr valueCount, MillisecondTime time);
+    [AOT.MonoPInvokeCallback(typeof(MessageEventDelegate))]
+    private static void MessageEventHandler(IntPtr handle, MessageTag tag, IntPtr messageType, IntPtr valuesPtr, IntPtr valueCount, MillisecondTime time) {
+        var inst = GetInstance(handle);
+        var e = inst?.MessageEvent;
+        if (e != null) {
+            MessageEventType t = MessageEventType.Bang;
+            Float[] values = new Float[(int)valueCount];
+
+            if (messageType.Equals(IntPtr.Zero)) {
+                Marshal.Copy(valuesPtr, values, 0, 1);
+                t = MessageEventType.Number;
+            } else if (messageType.Equals((IntPtr)1)) {
+                Marshal.Copy(valuesPtr, values, 0, (int)valueCount);
+                t = MessageEventType.List;
+            }
+
+            e(inst, new MessageEventArgs(tag, t, values, time));
+        }
+    }
+    private static MessageEventDelegate messageEventDelegate = MessageEventHandler;
+
     private bool RegisterMessageEventDelegate() {
-        InternalMessageEventDelegate d = (tag, messageType, valuesPtr, valueCount, time) => {
-            var e = MessageEvent;
-            if (e != null) {
-                MessageEventType t = MessageEventType.Bang;
-                Float[] values = new Float[(int)valueCount];
-
-                if (messageType.Equals(IntPtr.Zero)) {
-                    Marshal.Copy(valuesPtr, values, 0, 1);
-                    t = MessageEventType.Number;
-                } else if (messageType.Equals((IntPtr)1)) {
-                    Marshal.Copy(valuesPtr, values, 0, (int)valueCount);
-                    t = MessageEventType.List;
-                }
-
-                e(this, new MessageEventArgs(tag, t, values, time));
-            }
-        };
-        var r = RNBORegisterMessageEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(d));
-        registeredMessageEventDelegate = d;
-        return r;
+        return RNBORegisterMessageEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(messageEventDelegate), Handle);
     }
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    private delegate void InternalTransportEventDelegate(bool running, MillisecondTime time);
-    private InternalTransportEventDelegate registeredTransportEventDelegate;
+    private delegate void TransportEventDelegate(IntPtr handle, bool running, MillisecondTime time);
+    [AOT.MonoPInvokeCallback(typeof(TransportEventDelegate))]
+    private static void TransportEventHandler(IntPtr handle, bool running, MillisecondTime time) {
+        var inst = GetInstance(handle);
+        var e = inst?.TransportEvent;
+        if (e != null) {
+            e(inst, new TransportEventArgs(running, time));
+        }
+    }
+    private static TransportEventDelegate transportEventDelegate = TransportEventHandler;
+
     private bool RegisterTransportEventDelegate() {
-        InternalTransportEventDelegate d = (on, time) => {
-            var e = TransportEvent;
-            if (e != null) {
-                e(this, new TransportEventArgs(on, time));
-            }
-        };
-        var r = RNBORegisterTransportEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(d));
-        registeredTransportEventDelegate = d;
-        return r;
+        return RNBORegisterTransportEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(transportEventDelegate), Handle);
     }
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    private delegate void InternalTempoEventDelegate(Float bpm, MillisecondTime time);
-    private InternalTempoEventDelegate registeredTempoEventDelegate;
+    private delegate void TempoEventDelegate(IntPtr handle, Float bpm, MillisecondTime time);
+    [AOT.MonoPInvokeCallback(typeof(TempoEventDelegate))]
+    private static void TempoEventHandler(IntPtr handle, Float bpm, MillisecondTime time) {
+        var inst = GetInstance(handle);
+        var e = inst?.TempoEvent;
+        if (e != null) {
+            e(inst, new TempoEventArgs(bpm, time));
+        }
+    }
+    private static TempoEventDelegate tempoEventDelegate = TempoEventHandler;
+
     private bool RegisterTempoEventDelegate() {
-        InternalTempoEventDelegate d = (value, time) => {
-            var e = TempoEvent;
-            if (e != null) {
-                e(this, new TempoEventArgs(value, time));
-            }
-        };
-        var r = RNBORegisterTempoEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(d));
-        registeredTempoEventDelegate = d;
-        return r;
+        return RNBORegisterTempoEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(tempoEventDelegate), Handle);
     }
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    private delegate void InternalBeatTimeEventDelegate(Float value, MillisecondTime time);
-    private InternalBeatTimeEventDelegate registeredBeatTimeEventDelegate;
+    private delegate void BeatTimeEventDelegate(IntPtr handle, Float value, MillisecondTime time);
+    [AOT.MonoPInvokeCallback(typeof(BeatTimeEventDelegate))]
+    private static void BeatTimeEventHandler(IntPtr handle, Float value, MillisecondTime time) {
+        var inst = GetInstance(handle);
+        var e = inst?.BeatTimeEvent;
+        if (e != null) {
+            e(inst, new BeatTimeEventArgs(value, time));
+        }
+    }
+    private static BeatTimeEventDelegate beatTimeEventDelegate = BeatTimeEventHandler;
+
     private bool RegisterBeatTimeEventDelegate() {
-        InternalBeatTimeEventDelegate d = (value, time) => {
-            var e = BeatTimeEvent;
-            if (e != null) {
-                e(this, new BeatTimeEventArgs(value, time));
-            }
-        };
-        var r = RNBORegisterBeatTimeEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(d));
-        registeredBeatTimeEventDelegate = d;
-        return r;
+        return RNBORegisterBeatTimeEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(beatTimeEventDelegate), Handle);
     }
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    private delegate void InternalTimeSignatureEventDelegate(int numerator, int denominator,  MillisecondTime time);
-    private InternalTimeSignatureEventDelegate registeredTimeSignatureEventDelegate;
+    private delegate void TimeSignatureEventDelegate(IntPtr handle, int numerator, int denominator,  MillisecondTime time);
+    [AOT.MonoPInvokeCallback(typeof(TimeSignatureEventDelegate))]
+    private static void TimeSignatureEventHandler(IntPtr handle, int numerator, int denominator,  MillisecondTime time) {
+        var inst = GetInstance(handle);
+        var e = inst?.TimeSignatureEvent;
+        if (e != null) {
+            e(inst, new TimeSignatureEventArgs(numerator, denominator, time));
+        }
+    }
+    private static TimeSignatureEventDelegate timeSignatureEventDelegate = TimeSignatureEventHandler;
+
     private bool RegisterTimeSignatureEventDelegate() {
-        InternalTimeSignatureEventDelegate d = (numerator, denominator, time) => {
-            var e = TimeSignatureEvent;
-            if (e != null) {
-                e(this, new TimeSignatureEventArgs(numerator, denominator, time));
-            }
-        };
-        var r = RNBORegisterTimeSignatureEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(d));
-        registeredTimeSignatureEventDelegate = d;
-        return r;
+        return RNBORegisterTimeSignatureEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(timeSignatureEventDelegate), Handle);
     }
 
     private static TransportRequestDelegate transportRequestDelegate = Transport.AudioThreadUpdate;
@@ -549,20 +560,14 @@ public class ${PLUGIN_NAME_ID}Handle {
     }
 
     public bool RegisterTransport(Transport transport) {
-        /*
         if (transport == null) {
-            return RNBORegisterTransportRequestCallback(PluginKey, IntPtr.Zero);
+            return RNBORegisterTransportRequestCallback(PluginKey, IntPtr.Zero, IntPtr.Zero);
         } else {
-            //create a new object so we have a unique holder to release later
-            RegisteredTransport t = new RegisteredTransport(transport);
-            var r = RNBORegisterTransportRequestCallback(PluginKey, t.Ptr);
-            if (r) {
-                RegisterTransportDelegate(t.Ptr, t);
-            }
-            return r;
+            GCHandle handle = GCHandle.Alloc(transport);
+            IntPtr fPtr = Marshal.GetFunctionPointerForDelegate(transportRequestDelegate);
+
+            return RNBORegisterTransportRequestCallback(PluginKey, fPtr, GCHandle.ToIntPtr(handle));
         }
-        */
-        return false;
     }
 }
 

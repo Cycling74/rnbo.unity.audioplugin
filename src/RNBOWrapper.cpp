@@ -14,14 +14,14 @@ using RNBO::ParameterType;
 
 //callbacks
 extern "C" {
-	typedef void (UNITY_AUDIODSP_CALLBACK * CParameterEventCallback)(size_t, RNBO::ParameterValue, RNBO::MillisecondTime);
-	typedef void (UNITY_AUDIODSP_CALLBACK * CMessageEventCallback)(uint32_t, size_t, RNBO::ParameterValue *, size_t, RNBO::MillisecondTime);
-	typedef void (UNITY_AUDIODSP_CALLBACK * CReleaseDataRefCallback)(size_t);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CParameterEventCallback)(void * handle, size_t, RNBO::ParameterValue, RNBO::MillisecondTime);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CMessageEventCallback)(void * handle, uint32_t, size_t, RNBO::ParameterValue *, size_t, RNBO::MillisecondTime);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CReleaseDataRefCallback)(void * handle, size_t);
 
-	typedef void (UNITY_AUDIODSP_CALLBACK * CTransportEventCallback)(bool, RNBO::MillisecondTime);
-	typedef void (UNITY_AUDIODSP_CALLBACK * CTempoEventCallback)(RNBO::number, RNBO::MillisecondTime);
-	typedef void (UNITY_AUDIODSP_CALLBACK * CBeatTimeEventCallback)(RNBO::number, RNBO::MillisecondTime);
-	typedef void (UNITY_AUDIODSP_CALLBACK * CTimeSignatureEventCallback)(int32_t, int32_t, RNBO::MillisecondTime);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CTransportEventCallback)(void * handle, bool, RNBO::MillisecondTime);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CTempoEventCallback)(void * handle, RNBO::number, RNBO::MillisecondTime);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CBeatTimeEventCallback)(void * handle, RNBO::number, RNBO::MillisecondTime);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CTimeSignatureEventCallback)(void * handle, int32_t, int32_t, RNBO::MillisecondTime);
 
 	typedef void (UNITY_AUDIODSP_CALLBACK * CTransportRequestCallback)(void * handle, RNBO::MillisecondTime time, bool* running, RNBO::number* bpm, RNBO::number* beatTime, int32_t *timeSigNum, int32_t *timeSigDenom);
 }
@@ -785,31 +785,31 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOReleaseDa
 	});
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterParameterEventCallback(int32_t key, CParameterEventCallback callback)
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterParameterEventCallback(int32_t key, CParameterEventCallback callback, void * handle)
 {
-	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
-			inner->mEventHandler.setParameterEventCallback([callback](RNBO::ParameterEvent event) {
-					if (callback) {
-						callback(event.getIndex(), event.getValue(), event.getTime());
+	return with_instance(key, [callback, handle](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setParameterEventCallback([callback, handle](RNBO::ParameterEvent event) {
+					if (callback && handle) {
+						callback(handle, event.getIndex(), event.getValue(), event.getTime());
 					}
 			});
 	});
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterMessageEventCallback(int32_t key, CMessageEventCallback callback)
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterMessageEventCallback(int32_t key, CMessageEventCallback callback, void * handle)
 {
-	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
-			inner->mEventHandler.setMessageEventCallback([callback](RNBO::MessageEvent event) {
-					if (callback && event.getObjectId() == 0) {
+	return with_instance(key, [callback, handle](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setMessageEventCallback([callback, handle](RNBO::MessageEvent event) {
+					if (callback && handle && event.getObjectId() == 0) {
 						if (event.getType() == RNBO::MessageEvent::Type::List) {
 							//hold shared pointer
 							auto l = event.getListValue();
-							callback(event.getTag(), event.getType(), l->inner(), l->length, event.getTime());
+							callback(handle, event.getTag(), event.getType(), l->inner(), l->length, event.getTime());
 						} else if (event.getType() == RNBO::MessageEvent::Type::Number) {
 							RNBO::number v = event.getNumValue();
-							callback(event.getTag(), event.getType(), &v, 1, event.getTime());
+							callback(handle, event.getTag(), event.getType(), &v, 1, event.getTime());
 						} else if (event.getType() == RNBO::MessageEvent::Type::Bang) {
-							callback(event.getTag(), event.getType(), nullptr, 0, event.getTime());
+							callback(handle, event.getTag(), event.getType(), nullptr, 0, event.getTime());
 						} else {
 							//??
 						}
@@ -818,45 +818,45 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterM
 	});
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTransportEventCallback(int32_t key, CTransportEventCallback callback)
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTransportEventCallback(int32_t key, CTransportEventCallback callback, void * handle)
 {
-	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
-			inner->mEventHandler.setTransportEventCallback([callback](RNBO::TransportEvent event) {
-					if (callback) {
-						callback(event.getState() == RNBO::TransportState::RUNNING, event.getTime());
+	return with_instance(key, [callback, handle](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setTransportEventCallback([callback, handle](RNBO::TransportEvent event) {
+					if (callback && handle) {
+						callback(handle, event.getState() == RNBO::TransportState::RUNNING, event.getTime());
 					}
 			});
 	});
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTempoEventCallback(int32_t key, CTempoEventCallback callback)
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTempoEventCallback(int32_t key, CTempoEventCallback callback, void * handle)
 {
-	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
-			inner->mEventHandler.setTempoEventCallback([callback](RNBO::TempoEvent event) {
-					if (callback) {
-						callback(event.getTempo(), event.getTime());
+	return with_instance(key, [callback, handle](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setTempoEventCallback([callback, handle](RNBO::TempoEvent event) {
+					if (callback && handle) {
+						callback(handle, event.getTempo(), event.getTime());
 					}
 			});
 	});
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterBeatTimeEventCallback(int32_t key, CBeatTimeEventCallback callback)
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterBeatTimeEventCallback(int32_t key, CBeatTimeEventCallback callback, void * handle)
 {
-	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
-			inner->mEventHandler.setBeatTimeEventCallback([callback](RNBO::BeatTimeEvent event) {
-					if (callback) {
-						callback(event.getBeatTime(), event.getTime());
+	return with_instance(key, [callback, handle](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setBeatTimeEventCallback([callback, handle](RNBO::BeatTimeEvent event) {
+					if (callback && handle) {
+						callback(handle, event.getBeatTime(), event.getTime());
 					}
 			});
 	});
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTimeSignatureEventCallback(int32_t key, CTimeSignatureEventCallback callback)
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTimeSignatureEventCallback(int32_t key, CTimeSignatureEventCallback callback, void * handle)
 {
-	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
-			inner->mEventHandler.setTimeSignatureEventCallback([callback](RNBO::TimeSignatureEvent event) {
-					if (callback) {
-						callback(static_cast<int32_t>(event.getNumerator()), static_cast<int32_t>(event.getDenominator()), event.getTime());
+	return with_instance(key, [callback, handle](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setTimeSignatureEventCallback([callback, handle](RNBO::TimeSignatureEvent event) {
+					if (callback && handle) {
+						callback(handle, static_cast<int32_t>(event.getNumerator()), static_cast<int32_t>(event.getDenominator()), event.getTime());
 					}
 			});
 	});
