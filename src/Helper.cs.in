@@ -83,7 +83,7 @@ public class ${PLUGIN_NAME_ID}Handle {
     private static extern bool RNBORegisterTimeSignatureEventCallback(int key, IntPtr callback);
 
     [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
-    private static extern bool RNBORegisterGlobalTransportRequestCallback(IntPtr callback);
+    private static extern bool RNBORegisterGlobalTransportRequestCallback(IntPtr callback, IntPtr userData);
 
     [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
     private static extern bool RNBORegisterTransportRequestCallback(int key, IntPtr callback);
@@ -219,7 +219,7 @@ public class ${PLUGIN_NAME_ID}Handle {
         */
 
         sampleRate = AudioSettings.outputSampleRate;
-        RegisterIfNeeded();
+        //RegisterIfNeeded();
     }
     
     internal ${PLUGIN_NAME_ID}Handle(int key) {
@@ -258,7 +258,7 @@ public class ${PLUGIN_NAME_ID}Handle {
     }
     
     public void Update() {
-        RegisterIfNeeded();
+        //RegisterIfNeeded();
         RNBOPoll(PluginKey);
         ReleaseTransportRequests();
     }
@@ -534,22 +534,11 @@ public class ${PLUGIN_NAME_ID}Handle {
         return r;
     }
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    private delegate void TransportRequestDelegate(MillisecondTime time, out bool running, out Float bpm, out Float beatTime, out int timeSigNum, out int timeSigDenom);
-
     //a transport holder, so we get a unique ptr for each registration
     private class RegisteredTransport {
         Transport _transport;
         internal RegisteredTransport(Transport t) {
             _transport = t;
-            Del = AudioThreadUpdate;
-            Ptr = Marshal.GetFunctionPointerForDelegate(Del);
-        }
-        internal TransportRequestDelegate Del { get; private set; }
-        internal IntPtr Ptr { get; private set; }
-
-        internal void AudioThreadUpdate(MillisecondTime time, out bool running, out Float bpm, out Float beatTime, out int timeSigNum, out int timeSigDenom) {
-            _transport.AudioThreadUpdate(time, out running, out bpm, out beatTime, out timeSigNum, out timeSigDenom);
         }
     }
 
@@ -566,18 +555,21 @@ public class ${PLUGIN_NAME_ID}Handle {
         }
     }
 
+    private static TransportRequestDelegate transportRequestDelegate = Transport.AudioThreadUpdate;
+    private static GCHandle handle;
     public static void RegisterGlobalTransport(Transport transport) {
         if (transport == null) {
-            RNBORegisterGlobalTransportRequestCallback(IntPtr.Zero);
+            RNBORegisterGlobalTransportRequestCallback(IntPtr.Zero, IntPtr.Zero);
         } else {
-            //create a new object so we have a unique holder to release later
-            RegisteredTransport t = new RegisteredTransport(transport);
-            RNBORegisterGlobalTransportRequestCallback(t.Ptr);
-            RegisterTransportDelegate(t.Ptr, t);
+            handle = GCHandle.Alloc(transport);
+            IntPtr fPtr = Marshal.GetFunctionPointerForDelegate(transportRequestDelegate);
+
+            RNBORegisterGlobalTransportRequestCallback(fPtr, GCHandle.ToIntPtr(handle));
         }
     }
 
     public bool RegisterTransport(Transport transport) {
+        /*
         if (transport == null) {
             return RNBORegisterTransportRequestCallback(PluginKey, IntPtr.Zero);
         } else {
@@ -589,6 +581,8 @@ public class ${PLUGIN_NAME_ID}Handle {
             }
             return r;
         }
+        */
+        return false;
     }
 }
 
