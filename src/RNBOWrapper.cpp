@@ -23,7 +23,7 @@ extern "C" {
 	typedef void (UNITY_AUDIODSP_CALLBACK * CBeatTimeEventCallback)(RNBO::number, RNBO::MillisecondTime);
 	typedef void (UNITY_AUDIODSP_CALLBACK * CTimeSignatureEventCallback)(int32_t, int32_t, RNBO::MillisecondTime);
 
-	typedef void (UNITY_AUDIODSP_CALLBACK * CTransportRequestCallback)(void * userData, RNBO::MillisecondTime time, bool* running, RNBO::number* bpm, RNBO::number* beatTime, int32_t *timeSigNum, int32_t *timeSigDenom);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CTransportRequestCallback)(void * handle, RNBO::MillisecondTime time, bool* running, RNBO::number* bpm, RNBO::number* beatTime, int32_t *timeSigNum, int32_t *timeSigDenom);
 }
 
 namespace RNBOUnity
@@ -38,19 +38,22 @@ namespace RNBOUnity
 }
 namespace {
 
-  class TransportRequestData {
-    public:
-      TransportRequestData(CTransportRequestCallback cb, void * ud) : mCallback(cb), mUserData(ud) {}
-      CTransportRequestCallback callback() const { return mCallback; }
-      void * userData() const { return mUserData; }
-    private:
-      CTransportRequestCallback mCallback;
-      void * mUserData;
-  };
+	class Callback {
+		public:
+			Callback(void (* cb)(), void * handle) : mCallback(cb), mHandle(handle) {}
+			template<typename T>
+				T callback() const { return reinterpret_cast<T>(mCallback); }
+			void * handle() const { return mHandle; }
+		private:
+			//static method that we don't have to release
+			void (* mCallback)();
+			//GCHandle that we need to release
+			void * mHandle;
+	};
 
-	//we have a pointer to a delegate that we are holding, we need to notify the c# side that it should release
-	std::mutex transportReleaseQueueMutex; //only for reading from it
-	moodycamel::ReaderWriterQueue<TransportRequestData *, 32> transportRequestReleaseQueue;
+	//we have a pointer to a GCHandle that we are holding, we need to notify the c# side that it should release
+	std::mutex callbackReleaseQueueMutex; //only for reading from it
+	moodycamel::ReaderWriterQueue<Callback *, 32> callbackReleaseQueue;
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API int AUDIO_CALLING_CONVENTION UnityGetAudioEffectDefinitions(UnityAudioEffectDefinition*** definitionptr)
@@ -202,16 +205,16 @@ namespace RNBOUnity
 	const int32_t invalidKey = 0;
 	const int32_t maxKey = 16777216;
 
-	static std::atomic<TransportRequestData *> globalTransportCallback = nullptr;
-	TransportRequestData * globalTransportCallbackCurrent = nullptr;
+	static std::atomic<Callback *> globalTransportCallback = nullptr;
+	Callback * globalTransportCallbackCurrent = nullptr;
 
 	struct InnerData {
 			UnityEventHandler mEventHandler;
 			RNBO::CoreObject mCore;
 			int32_t mInstanceKey = invalidKey;
 
-			std::atomic<TransportRequestData *> mTransportCallback = nullptr;
-			TransportRequestData * mTransportCallbackCurrent = nullptr;
+			std::atomic<Callback *> mTransportCallback = nullptr;
+			Callback * mTransportCallbackCurrent = nullptr;
 			
 			bool mTransportRunning = false;
 			RNBO::number mTransportBPM = 0.0;
@@ -222,11 +225,11 @@ namespace RNBOUnity
 			InnerData() : mCore(&mEventHandler) {}
 			~InnerData() {
 				if (mTransportCallbackCurrent) {
-					transportRequestReleaseQueue.try_enqueue(mTransportCallbackCurrent);
+					callbackReleaseQueue.try_enqueue(mTransportCallbackCurrent);
 				}
 				auto transport = mTransportCallback.load();
 				if (transport) {
-					transportRequestReleaseQueue.try_enqueue(transport);
+					callbackReleaseQueue.try_enqueue(transport);
 				}
 			}
 	};
@@ -291,18 +294,18 @@ namespace RNBOUnity
 
 		//sync to transport
 		//first, release any old transports
-		TransportRequestData * transport = inner.mTransportCallback.load();
+		Callback * transport = inner.mTransportCallback.load();
 		if (transport != inner.mTransportCallbackCurrent) {
 			if (inner.mTransportCallbackCurrent != nullptr) {
-				transportRequestReleaseQueue.try_enqueue(inner.mTransportCallbackCurrent);
+				callbackReleaseQueue.try_enqueue(inner.mTransportCallbackCurrent);
 			}
 			inner.mTransportCallbackCurrent = transport;
 		}
 
-		TransportRequestData * globalTransport = globalTransportCallback.load();
+		Callback * globalTransport = globalTransportCallback.load();
 		if (globalTransport != globalTransportCallbackCurrent) {
 			if (globalTransportCallbackCurrent != nullptr) {
-				transportRequestReleaseQueue.try_enqueue(globalTransportCallbackCurrent);
+				callbackReleaseQueue.try_enqueue(globalTransportCallbackCurrent);
 			}
 			globalTransportCallbackCurrent = globalTransport;
 		}
@@ -315,9 +318,9 @@ namespace RNBOUnity
 			RNBO::number bpm = 0.0, beatTime = 0.0;
 			int32_t timeSigNum = 4, timeSigDenom = 4;
 
-			transport->callback()(
-          transport->userData(),
-          now, &running, &bpm, &beatTime, &timeSigNum, &timeSigDenom);
+			transport->callback<CTransportRequestCallback>()(
+					transport->handle(),
+					now, &running, &bpm, &beatTime, &timeSigNum, &timeSigDenom);
 			
 			if (running != inner.mTransportRunning) {
 				inner.mTransportRunning = running;
@@ -634,18 +637,18 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOPoll(int3
 	});
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API CTransportRequestCallback AUDIO_CALLING_CONVENTION RNBOReleaseTransportRequests()
+extern "C" UNITY_AUDIODSP_EXPORT_API void * AUDIO_CALLING_CONVENTION RNBOReleaseHandles()
 {
-  CTransportRequestCallback cb = nullptr;
-	std::unique_lock<std::mutex> guard(transportReleaseQueueMutex, std::try_to_lock);
+	void * handle = nullptr;
+	std::unique_lock<std::mutex> guard(callbackReleaseQueueMutex, std::try_to_lock);
 	if (guard.owns_lock()) {
-    TransportRequestData * d = nullptr;
-		if (transportRequestReleaseQueue.try_dequeue(d)) {
-      cb = d->callback();
-      delete d;
-    }
+		Callback * d = nullptr;
+		if (callbackReleaseQueue.try_dequeue(d)) {
+			handle = d->handle();
+			delete d;
+		}
 	}
-	return cb;
+	return handle;
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API RNBO::MessageTag AUDIO_CALLING_CONVENTION RNBOTag(const char * tagChar)
@@ -859,16 +862,24 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterT
 	});
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBORegisterGlobalTransportRequestCallback(CTransportRequestCallback callback, void * userData)
+extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBORegisterGlobalTransportRequestCallback(CTransportRequestCallback callback, void * handle)
 {
-	RNBOUnity::globalTransportCallback.store(new TransportRequestData(callback, userData));
+	if (callback != nullptr && handle != nullptr) {
+		RNBOUnity::globalTransportCallback.store(new Callback(reinterpret_cast<void (*)()>(callback), handle));
+	} else {
+		RNBOUnity::globalTransportCallback.store(nullptr);
+	}
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTransportRequestCallback(int32_t key, CTransportRequestCallback callback, void * userData)
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTransportRequestCallback(int32_t key, CTransportRequestCallback callback, void * handle)
 {
-	return with_instance(key, [callback, userData](RNBOUnity::InnerData * inner) {
-      TransportRequestData * data = new TransportRequestData(callback, userData);
+	return with_instance(key, [callback, handle](RNBOUnity::InnerData * inner) {
+			if (callback != nullptr && handle != nullptr) {
+			Callback * data = new Callback(reinterpret_cast<void (*)()>(callback), handle);
 			inner->mTransportCallback.store(data);
+			} else {
+			inner->mTransportCallback.store(nullptr);
+			}
 	});
 }
 

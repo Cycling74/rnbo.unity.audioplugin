@@ -128,7 +128,7 @@ public class ${PLUGIN_NAME_ID}Handle {
     private static extern void RNBOFreePreset(IntPtr payloadPtr);
 
     [DllImport("${PLUGIN_NAME_ID}")]
-    private static extern IntPtr RNBOReleaseTransportRequests();
+    private static extern IntPtr RNBOReleaseHandles();
 
 
     private static PatcherDescription patcherDescription;
@@ -249,18 +249,20 @@ public class ${PLUGIN_NAME_ID}Handle {
         get; internal set;
     }
 
-    void ReleaseTransportRequests() {
-        var r = RNBOReleaseTransportRequests();
-        while (!r.Equals(IntPtr.Zero)) {
-            TryReleaseTransportDelegate(r);
-            r = RNBOReleaseTransportRequests();
+    void ReleaseHandles() {
+        IntPtr p = RNBOReleaseHandles();
+        while (!p.Equals(IntPtr.Zero)) {
+            GCHandle gch = GCHandle.FromIntPtr(p);
+            if (gch != null)
+                gch.Free();
+            p = RNBOReleaseHandles();
         }
     }
     
     public void Update() {
         //RegisterIfNeeded();
         RNBOPoll(PluginKey);
-        ReleaseTransportRequests();
+        ReleaseHandles();
     }
 
     public MillisecondTime Now {
@@ -534,34 +536,12 @@ public class ${PLUGIN_NAME_ID}Handle {
         return r;
     }
 
-    //a transport holder, so we get a unique ptr for each registration
-    private class RegisteredTransport {
-        Transport _transport;
-        internal RegisteredTransport(Transport t) {
-            _transport = t;
-        }
-    }
-
-    private static Dictionary<IntPtr, RegisteredTransport> registeredTransports = new Dictionary<IntPtr, RegisteredTransport>();
-    private static void RegisterTransportDelegate(IntPtr functionPtr, RegisteredTransport transport) {
-        lock(registeredTransports) {
-            registeredTransports.Add(functionPtr, transport);
-        }
-    }
-
-    private static void TryReleaseTransportDelegate(IntPtr functionPtr) {
-        lock(registeredTransports) {
-            registeredTransports.Remove(functionPtr);
-        }
-    }
-
     private static TransportRequestDelegate transportRequestDelegate = Transport.AudioThreadUpdate;
-    private static GCHandle handle;
     public static void RegisterGlobalTransport(Transport transport) {
         if (transport == null) {
             RNBORegisterGlobalTransportRequestCallback(IntPtr.Zero, IntPtr.Zero);
         } else {
-            handle = GCHandle.Alloc(transport);
+            GCHandle handle = GCHandle.Alloc(transport);
             IntPtr fPtr = Marshal.GetFunctionPointerForDelegate(transportRequestDelegate);
 
             RNBORegisterGlobalTransportRequestCallback(fPtr, GCHandle.ToIntPtr(handle));
