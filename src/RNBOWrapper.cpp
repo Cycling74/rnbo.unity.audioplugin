@@ -244,6 +244,71 @@ namespace RNBOUnity
 					callbackReleaseQueue.try_enqueue(transport);
 				}
 			}
+
+			void updateTimeAndTransport(RNBO::MillisecondTime now) {
+				mCore.setCurrentTime(now);
+
+				//sync to transport
+				//first, release any old transports
+				Callback * transport = mTransportCallback.load();
+				if (transport != mTransportCallbackCurrent) {
+					if (mTransportCallbackCurrent != nullptr) {
+						callbackReleaseQueue.try_enqueue(mTransportCallbackCurrent);
+					}
+					mTransportCallbackCurrent = transport;
+				}
+
+				Callback * globalTransport = globalTransportCallback.load();
+				if (globalTransport != globalTransportCallbackCurrent) {
+					if (globalTransportCallbackCurrent != nullptr) {
+						callbackReleaseQueue.try_enqueue(globalTransportCallbackCurrent);
+					}
+					globalTransportCallbackCurrent = globalTransport;
+				}
+
+				if (transport == nullptr)
+					transport = globalTransport;
+
+				if (transport != nullptr) {
+					bool running = false;
+					RNBO::number bpm = 0.0, beatTime = 0.0;
+					int32_t timeSigNum = 4, timeSigDenom = 4;
+
+					transport->callback<CTransportRequestCallback>()(
+							transport->handle(),
+							now, &running, &bpm, &beatTime, &timeSigNum, &timeSigDenom);
+
+					if (running != mTransportRunning) {
+						mTransportRunning = running;
+
+						RNBO::TransportEvent event(now, running ? RNBO::TransportState::RUNNING : RNBO::TransportState::STOPPED);
+						mCore.scheduleEvent(event);
+					}
+
+					if (bpm != mTransportBPM) {
+						mTransportBPM = bpm;
+
+						RNBO::TempoEvent event(now, bpm);
+						mCore.scheduleEvent(event);
+					}
+
+					if (beatTime != mTransportBeatTime) {
+						mTransportBeatTime = beatTime;
+
+						RNBO::BeatTimeEvent event(now, beatTime);
+						mCore.scheduleEvent(event);
+					}
+
+					if (timeSigNum != mTransportTimeSigNum || timeSigDenom != mTransportTimeSigDenom) {
+						mTransportTimeSigNum = timeSigNum;
+						mTransportTimeSigDenom = timeSigDenom;
+
+						RNBO::TimeSignatureEvent event(now, timeSigNum, timeSigDenom);
+						mCore.scheduleEvent(event);
+					}
+
+				}
+			}
 	};
 
 	//TODO do align
@@ -302,68 +367,7 @@ namespace RNBOUnity
 
 		const RNBO::MillisecondTime stoms = 1000.0;
 		RNBO::MillisecondTime now = stoms * (static_cast<RNBO::MillisecondTime>(state->currdsptick) / static_cast<RNBO::MillisecondTime>(state->samplerate));
-		inner.mCore.setCurrentTime(now);
-
-		//sync to transport
-		//first, release any old transports
-		Callback * transport = inner.mTransportCallback.load();
-		if (transport != inner.mTransportCallbackCurrent) {
-			if (inner.mTransportCallbackCurrent != nullptr) {
-				callbackReleaseQueue.try_enqueue(inner.mTransportCallbackCurrent);
-			}
-			inner.mTransportCallbackCurrent = transport;
-		}
-
-		Callback * globalTransport = globalTransportCallback.load();
-		if (globalTransport != globalTransportCallbackCurrent) {
-			if (globalTransportCallbackCurrent != nullptr) {
-				callbackReleaseQueue.try_enqueue(globalTransportCallbackCurrent);
-			}
-			globalTransportCallbackCurrent = globalTransport;
-		}
-
-		if (transport == nullptr)
-			transport = globalTransport;
-
-		if (transport != nullptr) {
-			bool running = false;
-			RNBO::number bpm = 0.0, beatTime = 0.0;
-			int32_t timeSigNum = 4, timeSigDenom = 4;
-
-			transport->callback<CTransportRequestCallback>()(
-					transport->handle(),
-					now, &running, &bpm, &beatTime, &timeSigNum, &timeSigDenom);
-			
-			if (running != inner.mTransportRunning) {
-				inner.mTransportRunning = running;
-
-				RNBO::TransportEvent event(now, running ? RNBO::TransportState::RUNNING : RNBO::TransportState::STOPPED);
-				inner.mCore.scheduleEvent(event);
-			}
-
-			if (bpm != inner.mTransportBPM) {
-				inner.mTransportBPM = bpm;
-
-				RNBO::TempoEvent event(now, bpm);
-				inner.mCore.scheduleEvent(event);
-			}
-
-			if (beatTime != inner.mTransportBeatTime) {
-				inner.mTransportBeatTime = beatTime;
-
-				RNBO::BeatTimeEvent event(now, beatTime);
-				inner.mCore.scheduleEvent(event);
-			}
-
-			if (timeSigNum != inner.mTransportTimeSigNum || timeSigDenom != inner.mTransportTimeSigDenom) {
-				inner.mTransportTimeSigNum = timeSigNum;
-				inner.mTransportTimeSigDenom = timeSigDenom;
-
-				RNBO::TimeSignatureEvent event(now, timeSigNum, timeSigDenom);
-				inner.mCore.scheduleEvent(event);
-			}
-
-		}
+		inner.updateTimeAndTransport(now);
 
 		inner.mCore.process(inbuffer, inchannels, outbuffer, outchannels, length, nullptr, nullptr);
 
@@ -529,7 +533,7 @@ extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBOInstanceD
 extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBOProcess(RNBOUnity::InnerData * inner, RNBO::MillisecondTime now, float * buffer, int32_t channels, int32_t nframes, int32_t samplerate)
 {
 	inner->mCore.prepareToProcess(samplerate, nframes);
-	inner->mCore.setCurrentTime(now);
+	inner->updateTimeAndTransport(now);
 	inner->mCore.process(buffer, channels, buffer, channels, nframes, nullptr, nullptr);
 }
 
