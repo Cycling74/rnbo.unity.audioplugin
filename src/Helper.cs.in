@@ -62,6 +62,9 @@ public class ${PLUGIN_NAME_ID}Handle {
     private static extern bool RNBOGetParamValueNormalized(int key, ParameterIndex index, out ParameterValue value);
 
     [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
+    private static extern bool RNBOClearRegisteredCallbacks(int key);
+
+    [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
     private static extern bool RNBORegisterParameterEventCallback(int key, IntPtr callback, IntPtr handle);
 
     [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
@@ -212,6 +215,31 @@ public class ${PLUGIN_NAME_ID}Handle {
             return GCHandle.ToIntPtr(handle);
         }
     }
+
+    //handles for other objects that need to be cleaned up
+    //so far only transport objects
+    static HashSet<GCHandle> activeHandles = new HashSet<GCHandle>();
+
+    private static void updateActiveHandles(GCHandle h) {
+        lock (activeHandles) {
+            activeHandles.Add(h);
+        }
+    }
+
+    private static void releaseHandle(IntPtr p) {
+        lock (activeHandles) {
+            GCHandle gch = GCHandle.FromIntPtr(p);
+            if (activeHandles.Remove(gch)) {
+                //XXX Freeing is causing crashes when restarting the editor.
+                //So for now, we leak.. currently this is handle cache is only used for transport, so we should advise people not to create lots of transports
+                /*
+                if (gch.IsAllocated) {
+                    gch.Free();
+                }
+                */
+            }
+        }
+    }
     
     public ${PLUGIN_NAME_ID}Handle() {
         int key;
@@ -234,10 +262,13 @@ public class ${PLUGIN_NAME_ID}Handle {
     }
     
     ~${PLUGIN_NAME_ID}Handle() {
+        RNBOClearRegisteredCallbacks(PluginKey);
         if (OwnsInstance) {
             RNBOInstanceDestroy(ownedInstance);
         }
-        //TODO free handle
+        if (handle.IsAllocated) {
+            handle.Free();
+        }
     }
 
     private bool registered = false;
@@ -260,9 +291,7 @@ public class ${PLUGIN_NAME_ID}Handle {
     void ReleaseHandles() {
         IntPtr p = RNBOReleaseHandles();
         while (!p.Equals(IntPtr.Zero)) {
-            GCHandle gch = GCHandle.FromIntPtr(p);
-            if (gch != null)
-                gch.Free();
+            releaseHandle(p);
             p = RNBOReleaseHandles();
         }
     }
@@ -553,9 +582,11 @@ public class ${PLUGIN_NAME_ID}Handle {
             RNBORegisterGlobalTransportRequestCallback(IntPtr.Zero, IntPtr.Zero);
         } else {
             GCHandle handle = GCHandle.Alloc(transport);
+            IntPtr hPtr = GCHandle.ToIntPtr(handle);
             IntPtr fPtr = Marshal.GetFunctionPointerForDelegate(transportRequestDelegate);
 
-            RNBORegisterGlobalTransportRequestCallback(fPtr, GCHandle.ToIntPtr(handle));
+            RNBORegisterGlobalTransportRequestCallback(fPtr, hPtr);
+            updateActiveHandles(handle);
         }
     }
 
@@ -564,9 +595,14 @@ public class ${PLUGIN_NAME_ID}Handle {
             return RNBORegisterTransportRequestCallback(PluginKey, IntPtr.Zero, IntPtr.Zero);
         } else {
             GCHandle handle = GCHandle.Alloc(transport);
+            IntPtr hPtr = GCHandle.ToIntPtr(handle);
             IntPtr fPtr = Marshal.GetFunctionPointerForDelegate(transportRequestDelegate);
 
-            return RNBORegisterTransportRequestCallback(PluginKey, fPtr, GCHandle.ToIntPtr(handle));
+            var r = RNBORegisterTransportRequestCallback(PluginKey, fPtr, hPtr);
+            if (r) {
+                updateActiveHandles(handle);
+            }
+            return r;
         }
     }
 }
@@ -600,5 +636,14 @@ public class ${PLUGIN_NAME_ID}Helper : MonoBehaviour {
     public void Update() {
         if (Plugin != null)
             Plugin.Update();
+    }
+
+    public void OnApplicationQuit() {
+        //Clear out transport
+        //Not sure if this is important, maybe in the editor with plugins still loaded in mixers?
+        if (Plugin != null) {
+            Plugin.RegisterTransport(null);
+            ${PLUGIN_NAME_ID}Handle.RegisterGlobalTransport(null);
+        }
     }
 }

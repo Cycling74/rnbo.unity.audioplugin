@@ -132,6 +132,18 @@ namespace RNBOUnity
 			void setParameterEventCallback(ParameterEventCallback cb) { mParameterEventCallback = cb; };
 			void setPresetTouchedCallback(PresetTouchedCallback cb) { mPresetTouchedCallback = cb; };
 
+			//only call from the poll thread
+			void clearCallbacks() {
+				setMessageEventCallback(nullptr);
+				setMidiEventCallback(nullptr);
+				setTransportEventCallback(nullptr);
+				setTempoEventCallback(nullptr);
+				setBeatTimeEventCallback(nullptr);
+				setTimeSignatureEventCallback(nullptr);
+				setParameterEventCallback(nullptr);
+				setPresetTouchedCallback(nullptr);
+			}
+
 			void eventsAvailable() override {
 				mEventsAvailable.store(true);
 			}
@@ -782,6 +794,13 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOReleaseDa
 {
 	return with_instance(key, [id](RNBOUnity::InnerData * inner) {
 			inner->mCore.releaseExternalData(id);
+	});
+}
+
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOClearRegisteredCallbacks(int32_t key)
+{
+	return with_instance(key, [](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.clearCallbacks();
 	});
 }
 
