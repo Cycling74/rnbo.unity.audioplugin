@@ -169,6 +169,8 @@ namespace Cycling74.RNBOTypes {
         public List<PresetEntry> presets;
     }
 
+    public delegate void TransportRequestDelegate(IntPtr userData, MillisecondTime time, out bool running, out Float bpm, out Float beatTime, out int timeSigNum, out int timeSigDenom);
+
     public class Transport {
 
         public static Transport Global { get; } = new Transport();
@@ -230,8 +232,23 @@ namespace Cycling74.RNBOTypes {
         Float tempoCur = 100.0;
         Float beatTimeCur = 0.0;
         (UInt16, UInt16) timeSignatureCur = (4, 4);
+
+        [AOT.MonoPInvokeCallback(typeof(TransportRequestDelegate))]
+        public static void AudioThreadUpdate(IntPtr inst, MillisecondTime time, out bool run, out Float tempo, out Float beatTime, out int timeSigNum, out int timeSigDenom) {
+            GCHandle gch = GCHandle.FromIntPtr(inst);
+            Transport transport = (Transport)gch.Target;
+            if (transport != null) {
+                transport.Update(time, out run, out tempo, out beatTime, out timeSigNum, out timeSigDenom);
+            } else {
+                run = false;
+                tempo = 100.0;
+                beatTime = 0.0;
+                timeSigNum  = 4;
+                timeSigDenom = 4;
+            }
+        }
         
-        public void AudioThreadUpdate(MillisecondTime time, out bool run, out Float tempo, out Float beatTime, out int timeSigNum, out int timeSigDenom) {
+        internal void Update(MillisecondTime time, out bool run, out Float tempo, out Float beatTime, out int timeSigNum, out int timeSigDenom) {
             if (time != _lastUpdate) {
                 _lastUpdate = time;
 

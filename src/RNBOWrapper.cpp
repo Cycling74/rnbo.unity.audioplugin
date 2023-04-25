@@ -14,16 +14,16 @@ using RNBO::ParameterType;
 
 //callbacks
 extern "C" {
-	typedef void (UNITY_AUDIODSP_CALLBACK * CParameterEventCallback)(size_t, RNBO::ParameterValue, RNBO::MillisecondTime);
-	typedef void (UNITY_AUDIODSP_CALLBACK * CMessageEventCallback)(uint32_t, size_t, RNBO::ParameterValue *, size_t, RNBO::MillisecondTime);
-	typedef void (UNITY_AUDIODSP_CALLBACK * CReleaseDataRefCallback)(size_t);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CParameterEventCallback)(void * handle, size_t, RNBO::ParameterValue, RNBO::MillisecondTime);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CMessageEventCallback)(void * handle, uint32_t, size_t, RNBO::ParameterValue *, size_t, RNBO::MillisecondTime);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CReleaseDataRefCallback)(void * handle, size_t);
 
-	typedef void (UNITY_AUDIODSP_CALLBACK * CTransportEventCallback)(bool, RNBO::MillisecondTime);
-	typedef void (UNITY_AUDIODSP_CALLBACK * CTempoEventCallback)(RNBO::number, RNBO::MillisecondTime);
-	typedef void (UNITY_AUDIODSP_CALLBACK * CBeatTimeEventCallback)(RNBO::number, RNBO::MillisecondTime);
-	typedef void (UNITY_AUDIODSP_CALLBACK * CTimeSignatureEventCallback)(int32_t, int32_t, RNBO::MillisecondTime);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CTransportEventCallback)(void * handle, bool, RNBO::MillisecondTime);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CTempoEventCallback)(void * handle, RNBO::number, RNBO::MillisecondTime);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CBeatTimeEventCallback)(void * handle, RNBO::number, RNBO::MillisecondTime);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CTimeSignatureEventCallback)(void * handle, int32_t, int32_t, RNBO::MillisecondTime);
 
-	typedef void (UNITY_AUDIODSP_CALLBACK * CTransportRequestCallback)(RNBO::MillisecondTime time, bool* running, RNBO::number* bpm, RNBO::number* beatTime, int32_t *timeSigNum, int32_t *timeSigDenom);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CTransportRequestCallback)(void * handle, RNBO::MillisecondTime time, bool* running, RNBO::number* bpm, RNBO::number* beatTime, int32_t *timeSigNum, int32_t *timeSigDenom);
 }
 
 namespace RNBOUnity
@@ -37,9 +37,23 @@ namespace RNBOUnity
 	int InternalRegisterEffectDefinition(UnityAudioEffectDefinition& definition);
 }
 namespace {
-	//we have a pointer to a delegate that we are holding, we need to notify the c# side that it should release
-	std::mutex transportReleaseQueueMutex; //only for reading from it
-	moodycamel::ReaderWriterQueue<CTransportRequestCallback, 32> transportRequestReleaseQueue;
+
+	class Callback {
+		public:
+			Callback(void (* cb)(), void * handle) : mCallback(cb), mHandle(handle) {}
+			template<typename T>
+				T callback() const { return reinterpret_cast<T>(mCallback); }
+			void * handle() const { return mHandle; }
+		private:
+			//static method that we don't have to release
+			void (* mCallback)();
+			//GCHandle that we need to release
+			void * mHandle;
+	};
+
+	//we have a pointer to a GCHandle that we are holding, we need to notify the c# side that it should release
+	std::mutex callbackReleaseQueueMutex; //only for reading from it
+	moodycamel::ReaderWriterQueue<Callback *, 32> callbackReleaseQueue;
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API int AUDIO_CALLING_CONVENTION UnityGetAudioEffectDefinitions(UnityAudioEffectDefinition*** definitionptr)
@@ -118,6 +132,18 @@ namespace RNBOUnity
 			void setParameterEventCallback(ParameterEventCallback cb) { mParameterEventCallback = cb; };
 			void setPresetTouchedCallback(PresetTouchedCallback cb) { mPresetTouchedCallback = cb; };
 
+			//only call from the poll thread
+			void clearCallbacks() {
+				setMessageEventCallback(nullptr);
+				setMidiEventCallback(nullptr);
+				setTransportEventCallback(nullptr);
+				setTempoEventCallback(nullptr);
+				setBeatTimeEventCallback(nullptr);
+				setTimeSignatureEventCallback(nullptr);
+				setParameterEventCallback(nullptr);
+				setPresetTouchedCallback(nullptr);
+			}
+
 			void eventsAvailable() override {
 				mEventsAvailable.store(true);
 			}
@@ -191,16 +217,16 @@ namespace RNBOUnity
 	const int32_t invalidKey = 0;
 	const int32_t maxKey = 16777216;
 
-	static std::atomic<CTransportRequestCallback> globalTransportCallback = nullptr;
-	CTransportRequestCallback globalTransportCallbackCurrent = nullptr;
+	static std::atomic<Callback *> globalTransportCallback = nullptr;
+	Callback * globalTransportCallbackCurrent = nullptr;
 
 	struct InnerData {
 			UnityEventHandler mEventHandler;
 			RNBO::CoreObject mCore;
 			int32_t mInstanceKey = invalidKey;
 
-			std::atomic<CTransportRequestCallback> mTransportCallback = nullptr;
-			CTransportRequestCallback mTransportCallbackCurrent = nullptr;
+			std::atomic<Callback *> mTransportCallback = nullptr;
+			Callback * mTransportCallbackCurrent = nullptr;
 			
 			bool mTransportRunning = false;
 			RNBO::number mTransportBPM = 0.0;
@@ -211,11 +237,11 @@ namespace RNBOUnity
 			InnerData() : mCore(&mEventHandler) {}
 			~InnerData() {
 				if (mTransportCallbackCurrent) {
-					transportRequestReleaseQueue.try_enqueue(mTransportCallbackCurrent);
+					callbackReleaseQueue.try_enqueue(mTransportCallbackCurrent);
 				}
 				auto transport = mTransportCallback.load();
 				if (transport) {
-					transportRequestReleaseQueue.try_enqueue(transport);
+					callbackReleaseQueue.try_enqueue(transport);
 				}
 			}
 	};
@@ -280,18 +306,18 @@ namespace RNBOUnity
 
 		//sync to transport
 		//first, release any old transports
-		CTransportRequestCallback transport = inner.mTransportCallback.load();
+		Callback * transport = inner.mTransportCallback.load();
 		if (transport != inner.mTransportCallbackCurrent) {
 			if (inner.mTransportCallbackCurrent != nullptr) {
-				transportRequestReleaseQueue.try_enqueue(inner.mTransportCallbackCurrent);
+				callbackReleaseQueue.try_enqueue(inner.mTransportCallbackCurrent);
 			}
 			inner.mTransportCallbackCurrent = transport;
 		}
 
-		CTransportRequestCallback globalTransport = globalTransportCallback.load();
+		Callback * globalTransport = globalTransportCallback.load();
 		if (globalTransport != globalTransportCallbackCurrent) {
 			if (globalTransportCallbackCurrent != nullptr) {
-				transportRequestReleaseQueue.try_enqueue(globalTransportCallbackCurrent);
+				callbackReleaseQueue.try_enqueue(globalTransportCallbackCurrent);
 			}
 			globalTransportCallbackCurrent = globalTransport;
 		}
@@ -304,7 +330,9 @@ namespace RNBOUnity
 			RNBO::number bpm = 0.0, beatTime = 0.0;
 			int32_t timeSigNum = 4, timeSigDenom = 4;
 
-			transport(now, &running, &bpm, &beatTime, &timeSigNum, &timeSigDenom);
+			transport->callback<CTransportRequestCallback>()(
+					transport->handle(),
+					now, &running, &bpm, &beatTime, &timeSigNum, &timeSigDenom);
 			
 			if (running != inner.mTransportRunning) {
 				inner.mTransportRunning = running;
@@ -621,14 +649,18 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOPoll(int3
 	});
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API CTransportRequestCallback AUDIO_CALLING_CONVENTION RNBOReleaseTransportRequests()
+extern "C" UNITY_AUDIODSP_EXPORT_API void * AUDIO_CALLING_CONVENTION RNBOReleaseHandles()
 {
-	CTransportRequestCallback cb = nullptr;
-	std::unique_lock<std::mutex> guard(transportReleaseQueueMutex, std::try_to_lock);
+	void * handle = nullptr;
+	std::unique_lock<std::mutex> guard(callbackReleaseQueueMutex, std::try_to_lock);
 	if (guard.owns_lock()) {
-		transportRequestReleaseQueue.try_dequeue(cb);
+		Callback * d = nullptr;
+		if (callbackReleaseQueue.try_dequeue(d)) {
+			handle = d->handle();
+			delete d;
+		}
 	}
-	return cb;
+	return handle;
 }
 
 extern "C" UNITY_AUDIODSP_EXPORT_API RNBO::MessageTag AUDIO_CALLING_CONVENTION RNBOTag(const char * tagChar)
@@ -765,31 +797,38 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOReleaseDa
 	});
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterParameterEventCallback(int32_t key, CParameterEventCallback callback)
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOClearRegisteredCallbacks(int32_t key)
 {
-	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
-			inner->mEventHandler.setParameterEventCallback([callback](RNBO::ParameterEvent event) {
-					if (callback) {
-						callback(event.getIndex(), event.getValue(), event.getTime());
+	return with_instance(key, [](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.clearCallbacks();
+	});
+}
+
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterParameterEventCallback(int32_t key, CParameterEventCallback callback, void * handle)
+{
+	return with_instance(key, [callback, handle](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setParameterEventCallback([callback, handle](RNBO::ParameterEvent event) {
+					if (callback && handle) {
+						callback(handle, event.getIndex(), event.getValue(), event.getTime());
 					}
 			});
 	});
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterMessageEventCallback(int32_t key, CMessageEventCallback callback)
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterMessageEventCallback(int32_t key, CMessageEventCallback callback, void * handle)
 {
-	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
-			inner->mEventHandler.setMessageEventCallback([callback](RNBO::MessageEvent event) {
-					if (callback && event.getObjectId() == 0) {
+	return with_instance(key, [callback, handle](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setMessageEventCallback([callback, handle](RNBO::MessageEvent event) {
+					if (callback && handle && event.getObjectId() == 0) {
 						if (event.getType() == RNBO::MessageEvent::Type::List) {
 							//hold shared pointer
 							auto l = event.getListValue();
-							callback(event.getTag(), event.getType(), l->inner(), l->length, event.getTime());
+							callback(handle, event.getTag(), event.getType(), l->inner(), l->length, event.getTime());
 						} else if (event.getType() == RNBO::MessageEvent::Type::Number) {
 							RNBO::number v = event.getNumValue();
-							callback(event.getTag(), event.getType(), &v, 1, event.getTime());
+							callback(handle, event.getTag(), event.getType(), &v, 1, event.getTime());
 						} else if (event.getType() == RNBO::MessageEvent::Type::Bang) {
-							callback(event.getTag(), event.getType(), nullptr, 0, event.getTime());
+							callback(handle, event.getTag(), event.getType(), nullptr, 0, event.getTime());
 						} else {
 							//??
 						}
@@ -798,59 +837,68 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterM
 	});
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTransportEventCallback(int32_t key, CTransportEventCallback callback)
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTransportEventCallback(int32_t key, CTransportEventCallback callback, void * handle)
 {
-	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
-			inner->mEventHandler.setTransportEventCallback([callback](RNBO::TransportEvent event) {
-					if (callback) {
-						callback(event.getState() == RNBO::TransportState::RUNNING, event.getTime());
+	return with_instance(key, [callback, handle](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setTransportEventCallback([callback, handle](RNBO::TransportEvent event) {
+					if (callback && handle) {
+						callback(handle, event.getState() == RNBO::TransportState::RUNNING, event.getTime());
 					}
 			});
 	});
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTempoEventCallback(int32_t key, CTempoEventCallback callback)
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTempoEventCallback(int32_t key, CTempoEventCallback callback, void * handle)
 {
-	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
-			inner->mEventHandler.setTempoEventCallback([callback](RNBO::TempoEvent event) {
-					if (callback) {
-						callback(event.getTempo(), event.getTime());
+	return with_instance(key, [callback, handle](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setTempoEventCallback([callback, handle](RNBO::TempoEvent event) {
+					if (callback && handle) {
+						callback(handle, event.getTempo(), event.getTime());
 					}
 			});
 	});
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterBeatTimeEventCallback(int32_t key, CBeatTimeEventCallback callback)
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterBeatTimeEventCallback(int32_t key, CBeatTimeEventCallback callback, void * handle)
 {
-	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
-			inner->mEventHandler.setBeatTimeEventCallback([callback](RNBO::BeatTimeEvent event) {
-					if (callback) {
-						callback(event.getBeatTime(), event.getTime());
+	return with_instance(key, [callback, handle](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setBeatTimeEventCallback([callback, handle](RNBO::BeatTimeEvent event) {
+					if (callback && handle) {
+						callback(handle, event.getBeatTime(), event.getTime());
 					}
 			});
 	});
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTimeSignatureEventCallback(int32_t key, CTimeSignatureEventCallback callback)
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTimeSignatureEventCallback(int32_t key, CTimeSignatureEventCallback callback, void * handle)
 {
-	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
-			inner->mEventHandler.setTimeSignatureEventCallback([callback](RNBO::TimeSignatureEvent event) {
-					if (callback) {
-						callback(static_cast<int32_t>(event.getNumerator()), static_cast<int32_t>(event.getDenominator()), event.getTime());
+	return with_instance(key, [callback, handle](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setTimeSignatureEventCallback([callback, handle](RNBO::TimeSignatureEvent event) {
+					if (callback && handle) {
+						callback(handle, static_cast<int32_t>(event.getNumerator()), static_cast<int32_t>(event.getDenominator()), event.getTime());
 					}
 			});
 	});
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBORegisterGlobalTransportRequestCallback(CTransportRequestCallback callback)
+extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBORegisterGlobalTransportRequestCallback(CTransportRequestCallback callback, void * handle)
 {
-	RNBOUnity::globalTransportCallback.store(callback);
+	if (callback != nullptr && handle != nullptr) {
+		RNBOUnity::globalTransportCallback.store(new Callback(reinterpret_cast<void (*)()>(callback), handle));
+	} else {
+		RNBOUnity::globalTransportCallback.store(nullptr);
+	}
 }
 
-extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTransportRequestCallback(int32_t key, CTransportRequestCallback callback)
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterTransportRequestCallback(int32_t key, CTransportRequestCallback callback, void * handle)
 {
-	return with_instance(key, [callback](RNBOUnity::InnerData * inner) {
-			inner->mTransportCallback.store(callback);
+	return with_instance(key, [callback, handle](RNBOUnity::InnerData * inner) {
+			if (callback != nullptr && handle != nullptr) {
+			Callback * data = new Callback(reinterpret_cast<void (*)()>(callback), handle);
+			inner->mTransportCallback.store(data);
+			} else {
+			inner->mTransportCallback.store(nullptr);
+			}
 	});
 }
 
