@@ -128,9 +128,7 @@ cmake --build .
 cp -r SimpleFreqParam/Assets/Plugins/Darwin ../build/SimpleFreqParam/Assets/Plugins/
 ```
 
-Then install your package into your Unity project. In the inspector, you will need to set the plugins to load on startup,
-and you'll also likely need to update the `Android` plugin details to only load on `Android` 
-and potentially update the `CPU` entry for the Android plugin. For example, you will need to change this entry to `ARM64` for the Quest 2.
+Then install your package into your Unity project.
 
 
 ## Resources
