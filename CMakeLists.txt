@@ -144,10 +144,6 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/src/Helper.cs.asmdef.in ${HELPER_OUTPUT
 #write package.json
 configure_file(${CMAKE_CURRENT_LIST_DIR}/src/package.json.in ${PACKAGE_DIR}/package.json)
 
-#write plugin assembly
-set(PLUGIN_ASSEMBLY_NAME "${PLUGIN_MANUFACTURER_NAME_ID}.${PLUGIN_UNITY_PLATFORM_NAME}.${PLUGIN_NAME_ID}")
-configure_file(${CMAKE_CURRENT_LIST_DIR}/src/Plugin.asmdef.in ${PLUGIN_DIR}/${PLUGIN_ASSEMBLY_NAME}.asmdef)
-
 set(INSTANCE_ACCESS_HACK 0)
 if (RNBO_UNITY_INSTANCE_ACCESS_HACK)
 	set(INSTANCE_ACCESS_HACK 1)
