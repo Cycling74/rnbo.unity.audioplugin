@@ -24,7 +24,9 @@ adapter code you need to convert your RNBO C++ export into a plugin that you can
 
 ### File Structure and Building
 
-If you are on Windows, see some important [Building on Windows](#building-on-windows) notes below. You can also find some notes that are [Android-specific](#building-for-android-including-the-quest-2) if you are using that platform (for example, to build a VR project for the Oculus Quest).
+Please make sure you are using RNBO version `1.1.1` or later. This version comes bundled by default with Max `8.5.4`.
+
+If you are building on Windows, find the [Windows-specific notes](#building-for-windows) below. You can also find some notes that are [Android-specific](#building-for-android-including-the-quest-2) if you are using that platform (for example, to build a VR project for the Oculus Quest).
 
 The source code of the Plugin itself is in the `src/` directory. In general use of this repository, you shouldn't need to change anything in that directory.
 
@@ -37,7 +39,7 @@ Some notable directories:
 | export/                           | You can create this folder and export your code here for an easy default experience |
 | build/          | You can create this folder to build your Plugin package |
 
-We use CMake to actually build the plugin and its package. [Export your patcher](https://rnbo.cycling74.com/learn/the-cpp-source-code-target-introduction) to a subdirectory
+We use [CMake](https://cmake.org/) to actually build the plugin and its package. [Export your patcher](https://rnbo.cycling74.com/learn/the-cpp-source-code-target-introduction) to a subdirectory
 you make called `export` in this repo's root directory, next to the `src` directory, and if your export is called `rnbo_source.cpp`, you can run the following commands in your terminal to build with CMake. 
 
 Start by opening a terminal in the root of this `/rnbo.unity.audioplugin` directory. Then run:
@@ -75,27 +77,13 @@ cmake --build .
 After building, you should see a folder in your `/build` directory called **My Custom Plugin**. This should contain
 all you need to install it as a package in Unity.
 
-### Building On Windows
+### Building for Windows
 
-If you are building your RNBO plugin on Windows, and run into any issues, in particular the compile error `cs2026`, this is a known bug that we are working to address. In the meantime, you'll need to do one of two things. 
+If you are building on Windows, you may need to give a `--config` flag in the build step in order to build a Release build as opposed to a Debug build. You can do so with:
 
-#### Option 1: Use a recent devbuild of RNBO
-
-If you have access to development builds of RNBO, you should be using version `1.2.0-dev.31` or later to export your RNBO patcher for use in this repository. 
-
-#### Option 2: Manually edit `description.json`
-
-If you are using the public release version of RNBO, `1.1.0`, you'll need to manually edit your exported `description.json` file to remove the entire entry for `paramConversion`. 
-
-```js
-"paramConversion": {
-
-},
+```sh
+cmake --build . --config Release
 ```
-
-Everything in this entry, including the word `"paramConversion"`, everything in the curly braces, and the final comma, should be deleted.
-
-Then, save the file and proceed with the instructions in this README for building your RNBO Plugin.
 
 ### Building for Android (including the Quest 2)
 
@@ -155,6 +143,10 @@ and potentially update the `CPU` entry for the Android plugin. For example, you 
   * [Package Manifest Docs](https://docs.unity3d.com/Manual/upm-manifestPkg.html)
   * [Assembly Definition docs](https://docs.unity3d.com/Manual/ScriptCompilationAssemblyDefinitionFiles.html)
 * [cmake](https://cmake.org/)
+
+## Known Issues
+
+* **Transport Memory Leak:** if you create a lot of transports, they won't be deallocated, so you're better off re-using transports (rather than creating a new transport each time you need one) if you need more granular transport control than the global transport provides.
 
 ## TODO
 
