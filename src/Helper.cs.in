@@ -463,7 +463,7 @@ public class ${PLUGIN_NAME_ID}Handle {
     }
 
     //NOTE: might cause clicks
-    public bool GetPresetSync(out string payload) {
+    public bool CapturePresetSync(out string payload) {
         IntPtr p;
 
         var r = RNBOGetPresetSync(PluginKey, out p);
@@ -478,7 +478,7 @@ public class ${PLUGIN_NAME_ID}Handle {
     }
 
     //Trigger a preset capture, listen to PresetEvent for the data
-    public bool GetPreset() {
+    public bool CapturePreset() {
         return RNBOGetPreset(PluginKey);
     }
 
