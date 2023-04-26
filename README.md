@@ -151,4 +151,3 @@ and potentially update the `CPU` entry for the Android plugin. For example, you 
 ## TODO
 
 * Support additional platforms. Currently we support MacOS, 64-bit Linux, 64-bit Windows, and Android (including the Quest 2).
-* Async Preset Capture
