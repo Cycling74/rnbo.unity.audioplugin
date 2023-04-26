@@ -28,15 +28,16 @@ public class PresetLoad : MonoBehaviour
 
 ## Storing a Preset
 
-It is currently only possible to create a new preset synchronously, meaning you might get clicks or other disruptions to your audio while storing a new preset. For that reason, we don't recommend using this method as part of your live game, but rather only as a tool you might use during development. 
+You can capture the current state of your RNBO device to create a new preset. You can do this synchronously using the method `.CapturePresetSync()`, meaning you might get clicks or other disruptions to your audio while storing a new preset. For that reason, we don't recommend using this method as part of your live game, but rather only as a tool you might use during development.
+
+You can also capture a preset asynchronously, using the method `.CapturePreset()`. This should be safer to use in your live game code.
 
 The following example sets new values for this plugin's `"overblow"` and `"harmonics"` parameters when the user presses the `"T"` key, and then stores the state of the device as a new preset when the user presses `"Y"`.
 
 ```c#
 using UnityEngine;
-using System.Linq;
 
-public class PresetCreate : MonoBehaviour
+public class PresetCapture : MonoBehaviour
 {
     FeedbackPolyphonyGroupHelper helper;
 
@@ -65,7 +66,7 @@ public class PresetCreate : MonoBehaviour
         }
 
         // store the current state of the RNBO device as a new preset
-        if (Input.GetKeyDown(KeyCode.Y)) helper.Plugin.GetPresetSync(out newPreset);
+        if (Input.GetKeyDown(KeyCode.Y)) helper.Plugin.CapturePreset(out newPreset);
     }
 }
 
