@@ -157,6 +157,15 @@ namespace Cycling74.RNBOTypes {
         public MillisecondTime Time { get; private set; }
     }
 
+    public class PresetEventArgs : EventArgs {
+        public PresetEventArgs(string payload)
+        {
+            Preset = payload;
+        }
+
+        public string Preset { get; private set; }
+    }
+
     [System.Serializable]
     public class PresetEntry {
         public string name;

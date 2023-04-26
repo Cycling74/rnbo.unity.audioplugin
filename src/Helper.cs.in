@@ -21,6 +21,7 @@ public class ${PLUGIN_NAME_ID}Handle {
     public event EventHandler<TempoEventArgs> TempoEvent;
     public event EventHandler<BeatTimeEventArgs> BeatTimeEvent;
     public event EventHandler<TimeSignatureEventArgs> TimeSignatureEvent;
+    public event EventHandler<PresetEventArgs> PresetEvent;
 
     [DllImport("${PLUGIN_NAME_ID}")]
     private static extern IntPtr RNBOInstanceCreate(out int key);
@@ -88,6 +89,9 @@ public class ${PLUGIN_NAME_ID}Handle {
     [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
     private static extern bool RNBORegisterTransportRequestCallback(int key, IntPtr callback, IntPtr handle);
 
+    [DllImport("${PLUGIN_NAME_ID}", CallingConvention = CallingConvention.StdCall)]
+    private static extern bool RNBORegisterPresetCallback(int key, IntPtr callback, IntPtr handle);
+
     [DllImport("${PLUGIN_NAME_ID}")]
     private static extern bool RNBOSendMessageBang(int key, MessageTag tag, MillisecondTime atTime);
 
@@ -126,6 +130,9 @@ public class ${PLUGIN_NAME_ID}Handle {
 
     [DllImport("${PLUGIN_NAME_ID}")]
     private static extern void RNBOFreePreset(IntPtr payloadPtr);
+
+    [DllImport("${PLUGIN_NAME_ID}")]
+    private static extern bool RNBOGetPreset(int key);
 
     [DllImport("${PLUGIN_NAME_ID}")]
     private static extern IntPtr RNBOReleaseHandles();
@@ -280,6 +287,7 @@ public class ${PLUGIN_NAME_ID}Handle {
                 && RegisterTempoEventDelegate() 
                 && RegisterBeatTimeEventDelegate() 
                 && RegisterTimeSignatureEventDelegate() 
+                && RegisterPresetEventDelegate() 
                 ;
         }
     }
@@ -469,6 +477,11 @@ public class ${PLUGIN_NAME_ID}Handle {
         return r;
     }
 
+    //Trigger a preset capture, listen to PresetEvent for the data
+    public bool GetPreset() {
+        return RNBOGetPreset(PluginKey);
+    }
+
     private static ${PLUGIN_NAME_ID}Handle GetInstance(IntPtr handle) {
         GCHandle gch = GCHandle.FromIntPtr(handle);
         return (${PLUGIN_NAME_ID}Handle)gch.Target;
@@ -574,6 +587,22 @@ public class ${PLUGIN_NAME_ID}Handle {
 
     private bool RegisterTimeSignatureEventDelegate() {
         return RNBORegisterTimeSignatureEventCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(timeSignatureEventDelegate), Handle);
+    }
+
+    private delegate void PresetEventDelegate(IntPtr handle, IntPtr payload);
+    [AOT.MonoPInvokeCallback(typeof(PresetEventDelegate))]
+    private static void PresetEventHandler(IntPtr handle, IntPtr payload) {
+        var inst = GetInstance(handle);
+        var e = inst?.PresetEvent;
+        if (e != null) {
+            string spayload = Marshal.PtrToStringAnsi(payload);
+            e(inst, new PresetEventArgs(spayload));
+        }
+    }
+    private static PresetEventDelegate presetEventDelegate = PresetEventHandler;
+
+    private bool RegisterPresetEventDelegate() {
+        return RNBORegisterPresetCallback(PluginKey, Marshal.GetFunctionPointerForDelegate(presetEventDelegate), Handle);
     }
 
     private static TransportRequestDelegate transportRequestDelegate = Transport.AudioThreadUpdate;

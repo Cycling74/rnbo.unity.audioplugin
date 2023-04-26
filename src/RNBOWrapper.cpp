@@ -24,6 +24,7 @@ extern "C" {
 	typedef void (UNITY_AUDIODSP_CALLBACK * CTimeSignatureEventCallback)(void * handle, int32_t, int32_t, RNBO::MillisecondTime);
 
 	typedef void (UNITY_AUDIODSP_CALLBACK * CTransportRequestCallback)(void * handle, RNBO::MillisecondTime time, bool* running, RNBO::number* bpm, RNBO::number* beatTime, int32_t *timeSigNum, int32_t *timeSigDenom);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CPresetCallback)(void * handle, const char * payload);
 }
 
 namespace RNBOUnity
@@ -95,6 +96,7 @@ namespace RNBOUnity
 			typedef std::function<void(const RNBO::TimeSignatureEvent)> TimeSignatureEventCallback;
 			typedef std::function<void(const RNBO::ParameterEvent)> ParameterEventCallback;
 			typedef std::function<void()> PresetTouchedCallback;
+			typedef std::function<void(std::shared_ptr<const RNBO::Preset>)> PresetCallback;
 
 			UnityEventHandler(
 					MessageEventCallback mc = nullptr,
@@ -106,7 +108,8 @@ namespace RNBOUnity
 					TimeSignatureEventCallback timeSigCallback = nullptr,
 
 					ParameterEventCallback pc = nullptr,
-					PresetTouchedCallback pt = nullptr
+					PresetTouchedCallback pt = nullptr,
+					PresetCallback psc = nullptr
 					) :
 				mEventsAvailable(false),
 				mMessageEventCallback(mc),
@@ -118,7 +121,8 @@ namespace RNBOUnity
 				mTimeSignatureEventCallback(timeSigCallback),
 
 				mParameterEventCallback(pc),
-				mPresetTouchedCallback(pt)
+				mPresetTouchedCallback(pt),
+				mPresetCallback(psc)
 				{
 				}
 
@@ -131,6 +135,7 @@ namespace RNBOUnity
 			void setTimeSignatureEventCallback(TimeSignatureEventCallback cb) { mTimeSignatureEventCallback = cb; };
 			void setParameterEventCallback(ParameterEventCallback cb) { mParameterEventCallback = cb; };
 			void setPresetTouchedCallback(PresetTouchedCallback cb) { mPresetTouchedCallback = cb; };
+			void setPresetCallback(PresetCallback cb) { mPresetCallback = cb; };
 
 			//only call from the poll thread
 			void clearCallbacks() {
@@ -142,6 +147,7 @@ namespace RNBOUnity
 				setTimeSignatureEventCallback(nullptr);
 				setParameterEventCallback(nullptr);
 				setPresetTouchedCallback(nullptr);
+				setPresetCallback(nullptr);
 			}
 
 			void eventsAvailable() override {
@@ -200,6 +206,11 @@ namespace RNBOUnity
 					mTimeSignatureEventCallback(e);
 			}
 
+			void handlePreset(std::shared_ptr<const RNBO::Preset> p) {
+				if (mPresetCallback)
+					mPresetCallback(p);
+			}
+
 		private:
 			std::atomic<bool> mEventsAvailable;
 
@@ -212,6 +223,7 @@ namespace RNBOUnity
 
 			ParameterEventCallback mParameterEventCallback;
 			PresetTouchedCallback mPresetTouchedCallback;
+			PresetCallback mPresetCallback;
 	};
 
 	const int32_t invalidKey = 0;
@@ -625,6 +637,15 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOGetPreset
 	});
 }
 
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOGetPreset(int32_t key)
+{
+	return with_instance(key, [](RNBOUnity::InnerData * inner) {
+			inner->mCore.getPreset([inner](std::shared_ptr<const RNBO::Preset> p) {
+					inner->mEventHandler.handlePreset(p);
+			});
+	});
+}
+
 extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBOFreePreset(char * payload)
 {
 	if (payload) {
@@ -903,6 +924,18 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterT
 			} else {
 			inner->mTransportCallback.store(nullptr);
 			}
+	});
+}
+
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBORegisterPresetCallback(int32_t key, CPresetCallback callback, void * handle)
+{
+	return with_instance(key, [callback, handle](RNBOUnity::InnerData * inner) {
+			inner->mEventHandler.setPresetCallback([callback, handle](std::shared_ptr<const RNBO::Preset> preset) {
+					if (callback && handle) {
+						std::string s = RNBO::convertPresetToJSON(*preset);
+						callback(handle, s.c_str());
+					}
+			});
 	});
 }
 
