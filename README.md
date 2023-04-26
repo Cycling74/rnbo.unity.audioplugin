@@ -109,7 +109,7 @@ The example below demonstrates this with a macOS user account called `xnor`.
 ```
 mkdir build && cd build
 cmake .. \
-  -DANDROID_PLATFORM=android-29 \
+  -DANDROID_PLATFORM=29 \
   -DANDROID_ABI=arm64-v8a \
   -DCMAKE_TOOLCHAIN_FILE=/Applications/Unity/Hub/Editor/2021.3.23f1/PlaybackEngines/AndroidPlayer/NDK/build/cmake/android.toolchain.cmake \
   -DRNBO_EXPORT_DIR=/Users/xnor/Documents/export/simple-freq-param \
