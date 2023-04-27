@@ -2,13 +2,27 @@
 #include <RNBO.h>
 #include <vector>
 #include <mutex>
-#include <shared_mutex>
 #include <limits>
 #include <atomic>
 #include <readerwriterqueue/readerwriterqueue.h>
 
 #include <rnbo_description.h>
 #include <iostream>
+
+
+// if there is no shared lock, we simply use unique lock
+// there may be a slight performance hit when calling functions that use
+// with_instance from multiple threads but that might not actually happen anyway
+#ifdef NO_SHARED_LOCK
+using rw_mutex = std::mutex;
+using write_lock = std::lock_guard<std::mutex>;
+using read_lock = std::lock_guard<std::mutex>;
+#else
+#include <shared_mutex>
+using rw_mutex = std::shared_mutex;
+using write_lock = std::unique_lock<std::shared_mutex>;
+using read_lock = std::shared_lock<std::shared_mutex>;
+#endif
 
 using RNBO::ParameterType;
 
@@ -239,7 +253,7 @@ namespace RNBOUnity
 
 			std::atomic<Callback *> mTransportCallback = nullptr;
 			Callback * mTransportCallbackCurrent = nullptr;
-			
+
 			bool mTransportRunning = false;
 			RNBO::number mTransportBPM = 0.0;
 			RNBO::number mTransportBeatTime = -1.0;
@@ -338,7 +352,7 @@ namespace RNBOUnity
 	std::vector<RNBO::ParameterIndex> param_index_map;
 
 #if RNBO_UNITY_INSTANCE_ACCESS_HACK == 1
-	std::shared_mutex instances_mutex;
+	rw_mutex instances_mutex;
 	std::unordered_map<int32_t, InnerData *> instances;
 #endif
 
@@ -356,7 +370,7 @@ namespace RNBOUnity
 		{
 			auto key = effectdata->inner.mInstanceKey;
 			if (key != invalidKey) {
-				std::unique_lock wlock(instances_mutex);
+				write_lock wlock(instances_mutex);
 				instances.erase(key);
 			}
 		}
@@ -392,7 +406,7 @@ namespace RNBOUnity
 		//set index map for later retrieval
 #if RNBO_UNITY_INSTANCE_ACCESS_HACK == 1
 		if (index == 0) {
-			std::unique_lock wlock(instances_mutex);
+			write_lock wlock(instances_mutex);
 			int32_t key = static_cast<int32_t>(value);
 			//integer precision
 			assert(key >= 0 && key <= 16777216);
@@ -491,7 +505,7 @@ namespace {
 	}
 
 	bool with_instance(int32_t key, std::function<void(RNBOUnity::InnerData *)> func) {
-		std::shared_lock rlock(RNBOUnity::instances_mutex);
+		read_lock rlock(RNBOUnity::instances_mutex);
 		auto it = RNBOUnity::instances.find(key);
 		if (it != RNBOUnity::instances.end()) {
 			func(it->second);
@@ -508,7 +522,7 @@ namespace {
 
 extern "C" UNITY_AUDIODSP_EXPORT_API void * AUDIO_CALLING_CONVENTION RNBOInstanceCreate(int32_t* outkey)
 {
-	std::unique_lock wlock(RNBOUnity::instances_mutex);
+	write_lock wlock(RNBOUnity::instances_mutex);
 
 	//TODO, better key lookup
 	int32_t key = -1;
@@ -532,7 +546,7 @@ extern "C" UNITY_AUDIODSP_EXPORT_API void AUDIO_CALLING_CONVENTION RNBOInstanceD
 {
 	auto key = inst->mInstanceKey;
 
-	std::unique_lock wlock(RNBOUnity::instances_mutex);
+	write_lock wlock(RNBOUnity::instances_mutex);
 	auto it = RNBOUnity::instances.find(key);
 	if (it == RNBOUnity::instances.end()) {
 		//ERROR
@@ -658,8 +672,14 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOPoll(int3
 {
 	//service the shared release queue
 	{
+
+#ifndef NO_SHARED_LOCK
 		std::unique_lock<std::mutex> guard(datarefReleaseQueueMutex, std::try_to_lock);
 		if (guard.owns_lock()) {
+#else
+		{
+			std::lock_guard<std::mutex> guard(datarefReleaseQueueMutex);
+#endif
 			char * d = nullptr;
 			while (datarefReleaseQueue.try_dequeue(d)) {
 				if (d) {
@@ -677,8 +697,13 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOPoll(int3
 extern "C" UNITY_AUDIODSP_EXPORT_API void * AUDIO_CALLING_CONVENTION RNBOReleaseHandles()
 {
 	void * handle = nullptr;
+#ifndef NO_SHARED_LOCK
 	std::unique_lock<std::mutex> guard(callbackReleaseQueueMutex, std::try_to_lock);
 	if (guard.owns_lock()) {
+#else
+	{
+		std::lock_guard<std::mutex> guard(callbackReleaseQueueMutex);
+#endif
 		Callback * d = nullptr;
 		if (callbackReleaseQueue.try_dequeue(d)) {
 			handle = d->handle();

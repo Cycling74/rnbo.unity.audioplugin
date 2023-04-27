@@ -10,6 +10,8 @@ project(RNBO_UNITY_NATIVE_AUDIO_PLUGIN
 
 #use 17 so we have shared_mutex
 set (CMAKE_CXX_STANDARD 17)
+#didn't become available until the 10.12 osx sdk
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12)
 
 #support default in either standalone or rnbo adapters/
 set(DEFAULT_CPP_DIR "${CMAKE_CURRENT_LIST_DIR}/export/rnbo/")
@@ -240,6 +242,11 @@ target_compile_definitions(RNBOUnityPlugin
 )
 
 if (BUILD_SYSTEM_IS_MINGW)
+	#mingw_stdthreads doesn't have shared_lock
+	target_compile_definitions(RNBOUnityPlugin
+		PRIVATE
+		NO_SHARED_LOCK
+	)
 	target_link_libraries(RNBOUnityPlugin
 		PRIVATE
 		mingw_stdthreads
