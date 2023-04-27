@@ -11,13 +11,20 @@ project(RNBO_UNITY_NATIVE_AUDIO_PLUGIN
 #use 17 so we have shared_mutex
 set (CMAKE_CXX_STANDARD 17)
 
+#support default in either standalone or rnbo adapters/
+set(DEFAULT_CPP_DIR "${CMAKE_CURRENT_LIST_DIR}/export/rnbo/")
+set(PKG_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../")
+if (EXISTS ${PKG_CPP_DIR})
+	set(DEFAULT_CPP_DIR ${PKG_CPP_DIR})
+endif()
+
 set(PLUGIN_NAME "RNBOPlugin" CACHE STRING "The name of the audio plugin")
 set(PLUGIN_VERSION "0.0.1" CACHE STRING "Plugin version string")
 set(PLUGIN_MANUFACTURER_NAME "Cycling '74" CACHE STRING "Specify the name of the plugin's author")
 set(PLUGIN_MANUFACTURER_TLD "com" CACHE STRING "the Top Level Domain for your company's website URL")
 
-set(RNBO_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/export/rnbo/" CACHE PATH "The path to the the RNBO c++ source directory")
-set(RNBO_EXPORT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/export/" CACHE PATH "The directory that holds the generated RNBO exports")
+set(RNBO_CPP_DIR ${DEFAULT_CPP_DIR} CACHE PATH "The path to the the RNBO c++ source directory")
+set(RNBO_EXPORT_DIR "${CMAKE_CURRENT_LIST_DIR}/export/" CACHE PATH "The directory that holds the generated RNBO exports")
 
 set(RNBO_CLASS_FILE_NAME "rnbo_source.cpp" CACHE STRING "the name of your rnbo class file")
 mark_as_advanced(RNBO_CLASS_FILE_NAME)
