@@ -37,6 +37,7 @@ set(RNBO_DESCRIPTION_FILE ${RNBO_EXPORT_DIR}/description.json)
 set(RNBO_PRESETS_FILE ${RNBO_EXPORT_DIR}/presets.json)
 
 include(${RNBO_CPP_DIR}/cmake/CCache.cmake)
+include(${RNBO_CPP_DIR}/cmake/MinGWSTDThreads.cmake)
 
 #generate description header
 include(${RNBO_CPP_DIR}/cmake/RNBODescriptionHeader.cmake)
