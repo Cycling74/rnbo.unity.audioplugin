@@ -109,7 +109,7 @@ The example below demonstrates this with a macOS user account called `xnor`.
 ```
 mkdir build && cd build
 cmake .. \
-  -DANDROID_PLATFORM=android-29 \
+  -DANDROID_PLATFORM=29 \
   -DANDROID_ABI=arm64-v8a \
   -DCMAKE_TOOLCHAIN_FILE=/Applications/Unity/Hub/Editor/2021.3.23f1/PlaybackEngines/AndroidPlayer/NDK/build/cmake/android.toolchain.cmake \
   -DRNBO_EXPORT_DIR=/Users/xnor/Documents/export/simple-freq-param \
@@ -128,9 +128,7 @@ cmake --build .
 cp -r SimpleFreqParam/Assets/Plugins/Darwin ../build/SimpleFreqParam/Assets/Plugins/
 ```
 
-Then install your package into your Unity project. In the inspector, you will need to set the plugins to load on startup,
-and you'll also likely need to update the `Android` plugin details to only load on `Android` 
-and potentially update the `CPU` entry for the Android plugin. For example, you will need to change this entry to `ARM64` for the Quest 2.
+Then install your package into your Unity project.
 
 
 ## Resources
