@@ -18,12 +18,6 @@ This should result in the **RNBO Unity Types** package and the package named wit
 
 Inside the package for your plugin, there should be a directory called `/Assets` which includes your plugin in `Plugins` and the helper object in `Scripts`.
 
-Find your plugin, which on macOS will be a `.bundle`, on Windows a `.dll`, and on Linux a `.so`, and select it so that it will open in Unity's Inspector.
-
-In the Inspector, check "Load on Startup" and then "Apply."
-
-![load-on-startup](images/load-on-startup.png)
-
 Now you you should be able to load your RNBO plugin in your Unity project.
 
 ## Where you can load your RNBO Plugin
