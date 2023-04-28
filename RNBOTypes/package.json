@@ -1,6 +1,6 @@
 {
   "name": "com.cycling74.rnbotypes",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "displayName": "RNBO Unity Types",
   "description": "Shared types for RNBO Unity Audio plugins",
   "unity": "2017.1",

@@ -1,0 +1,70 @@
+fileFormatVersion: 2
+guid: ${PLUGIN_GUID}
+PluginImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  iconMap: {}
+  executionOrder: {}
+  defineConstraints: []
+  isPreloaded: 1
+  isOverridable: 1
+  isExplicitlyReferenced: 0
+  validateReferences: 1
+  platformData:
+  - first:
+      : Any
+    second:
+      enabled: 0
+      settings:
+        Exclude Android: ${UNITY_EXCLUDE_ANDROID}
+        Exclude Editor: ${UNITY_EXCLUDE_EDITOR}
+        Exclude Linux64: ${UNITY_EXCLUDE_LINUX64}
+        Exclude OSXUniversal: ${UNITY_EXCLUDE_OSX}
+        Exclude Win: ${UNITY_EXCLUDE_WIN32}
+        Exclude Win64: ${UNITY_EXCLUDE_WIN64}
+  - first:
+      Android: Android
+    second:
+      enabled: ${UNITY_ENABLE_ANDROID}
+      settings:
+        CPU: ${UNITY_ARM_CPU}
+  - first:
+      Any: 
+    second:
+      enabled: 0
+      settings: {}
+  - first:
+      Editor: Editor
+    second:
+      enabled: ${UNITY_ENABLE_EDITOR}
+      settings:
+        CPU: AnyCPU
+        DefaultValueInitialized: true
+        OS: ${UNITY_EDITOR_OS}
+  - first:
+      Standalone: Linux64
+    second:
+      enabled: ${UNITY_ENABLE_LINUX64}
+      settings:
+        CPU: x86_64
+  - first:
+      Standalone: OSXUniversal
+    second:
+      enabled: ${UNITY_ENABLE_OSX}
+      settings:
+        CPU: AnyCPU
+  - first:
+      Standalone: Win
+    second:
+      enabled: ${UNITY_ENABLE_WIN32}
+      settings:
+        CPU: x86
+  - first:
+      Standalone: Win64
+    second:
+      enabled: ${UNITY_ENABLE_WIN64}
+      settings:
+        CPU: x86_64
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

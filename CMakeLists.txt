@@ -10,14 +10,23 @@ project(RNBO_UNITY_NATIVE_AUDIO_PLUGIN
 
 #use 17 so we have shared_mutex
 set (CMAKE_CXX_STANDARD 17)
+#didn't become available until the 10.12 osx sdk
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12)
+
+#support default in either standalone or rnbo adapters/
+set(DEFAULT_CPP_DIR "${CMAKE_CURRENT_LIST_DIR}/export/rnbo/")
+set(PKG_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../")
+if (EXISTS ${PKG_CPP_DIR})
+	set(DEFAULT_CPP_DIR ${PKG_CPP_DIR})
+endif()
 
 set(PLUGIN_NAME "RNBOPlugin" CACHE STRING "The name of the audio plugin")
 set(PLUGIN_VERSION "0.0.1" CACHE STRING "Plugin version string")
 set(PLUGIN_MANUFACTURER_NAME "Cycling '74" CACHE STRING "Specify the name of the plugin's author")
 set(PLUGIN_MANUFACTURER_TLD "com" CACHE STRING "the Top Level Domain for your company's website URL")
 
-set(RNBO_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/export/rnbo/" CACHE PATH "The path to the the RNBO c++ source directory")
-set(RNBO_EXPORT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/export/" CACHE PATH "The directory that holds the generated RNBO exports")
+set(RNBO_CPP_DIR ${DEFAULT_CPP_DIR} CACHE PATH "The path to the the RNBO c++ source directory")
+set(RNBO_EXPORT_DIR "${CMAKE_CURRENT_LIST_DIR}/export/" CACHE PATH "The directory that holds the generated RNBO exports")
 
 set(RNBO_CLASS_FILE_NAME "rnbo_source.cpp" CACHE STRING "the name of your rnbo class file")
 mark_as_advanced(RNBO_CLASS_FILE_NAME)
@@ -30,6 +39,7 @@ set(RNBO_DESCRIPTION_FILE ${RNBO_EXPORT_DIR}/description.json)
 set(RNBO_PRESETS_FILE ${RNBO_EXPORT_DIR}/presets.json)
 
 include(${RNBO_CPP_DIR}/cmake/CCache.cmake)
+include(${RNBO_CPP_DIR}/cmake/MinGWSTDThreads.cmake)
 
 #generate description header
 include(${RNBO_CPP_DIR}/cmake/RNBODescriptionHeader.cmake)
@@ -73,26 +83,87 @@ endif()
 
 set(PLUGIN_DIR ${PACKAGE_DIR}/Assets/Plugins/${CMAKE_SYSTEM_NAME}/)
 
+#settings for plugin .meta file
+set(PLUGIN_UNITY_CPU ${CMAKE_SYSTEM_PROCESSOR})
+if (${PLUGIN_UNITY_CPU} STREQUAL aarch64)
+	set(PLUGIN_UNITY_CPU "ARM64")
+elseif (${PLUGIN_UNITY_CPU} STREQUAL armv7-a)
+	set(PLUGIN_UNITY_CPU "ARMv7")
+endif()
+
+set(UNITY_EXCLUDE_ANDROID 1)
+set(UNITY_EXCLUDE_EDITOR 0)
+set(UNITY_EXCLUDE_LINUX64 1)
+set(UNITY_EXCLUDE_OSX 1)
+set(UNITY_EXCLUDE_WIN32 1)
+set(UNITY_EXCLUDE_WIN64 1)
+
+set(UNITY_ENABLE_ANDROID 0)
+set(UNITY_ENABLE_LINUX64 0)
+set(UNITY_ENABLE_OSX 0)
+set(UNITY_ENABLE_WIN32 0)
+set(UNITY_ENABLE_WIN64 0)
+
+set(UNITY_ARM_CPU ARMv7)
+set(UNITY_EDITOR_OS AnyOS)
+
+set(GENERATE_META On)
+
 if (${CMAKE_SYSTEM_NAME} STREQUAL Linux)
+	if (${BIT_DEPTH} EQUAL 32)
+		set(GENERATE_META Off)
+	endif()
 	set(PLUGIN_UNITY_PLATFORM_NAME "LinuxStandalone${BIT_DEPTH}")
+	set(PLUGIN_META_PATH ${PLUGIN_DIR}/lib${PLUGIN_NAME_ID}.so.meta)
+	set(UNITY_EXCLUDE_LINUX64 0)
+	set(UNITY_ENABLE_LINUX64 1)
+	set(UNITY_EDITOR_OS Linux)
 elseif (${CMAKE_SYSTEM_NAME} STREQUAL Windows)
 	set(PLUGIN_UNITY_PLATFORM_NAME "WindowsStandalone${BIT_DEPTH}")
+	set(PLUGIN_META_PATH ${PLUGIN_DIR}/${PLUGIN_NAME_ID}.dll.meta)
+	if (${BIT_DEPTH} STREQUAL 32)
+		set(UNITY_EXCLUDE_WIN32 0)
+		set(UNITY_ENABLE_WIN32 1)
+	else ()
+		set(UNITY_EXCLUDE_WIN64 0)
+		set(UNITY_ENABLE_WIN64 1)
+	endif()
+	set(UNITY_EDITOR_OS Windows)
 elseif (${CMAKE_SYSTEM_NAME} STREQUAL Darwin)
 	set(PLUGIN_UNITY_PLATFORM_NAME "macOSStandalone")
+	set(PLUGIN_META_PATH ${PLUGIN_DIR}/${PLUGIN_NAME_ID}.bundle.meta)
+	set(PLUGIN_UNITY_CPU "AnyCPU")
+	set(UNITY_EXCLUDE_OSX 0)
+	set(UNITY_ENABLE_OSX 1)
+	set(UNITY_EDITOR_OS OSX)
 elseif (${CMAKE_SYSTEM_NAME} STREQUAL Android)
 	set(PLUGIN_UNITY_PLATFORM_NAME "Android")
-	set(PLUGIN_DIR ${PLUGIN_DIR}/libs/${ANDROID_ABI}/)
+	set(PLUGIN_DIR ${PLUGIN_DIR}/${ANDROID_ABI}/)
+	set(PLUGIN_META_PATH ${PLUGIN_DIR}/lib${PLUGIN_NAME_ID}.so.meta)
+	set(UNITY_EXCLUDE_ANDROID 0)
+	set(UNITY_ENABLE_ANDROID 1)
+	set(UNITY_EXCLUDE_EDITOR 1)
+	set(UNITY_ARM_CPU ${PLUGIN_UNITY_CPU})
 else()
+	set(GENERATE_META Off)
 	message(FATAL "${CMAKE_SYSTEM_NAME} not yet supported for RNBOUnityPlugin")
 endif()
 
-message(STATUS "building for ${PLUGIN_UNITY_PLATFORM_NAME} with bit depth ${BIT_DEPTH}")
+if (${UNITY_EXCLUDE_EDITOR} EQUAL 0)
+	set(UNITY_ENABLE_EDITOR 1)
+else()
+	set(UNITY_ENABLE_EDITOR 0)
+endif()
+
+message(STATUS "building for ${PLUGIN_UNITY_PLATFORM_NAME} with bit depth ${BIT_DEPTH} for CPU ${PLUGIN_UNITY_CPU}")
 
 add_library(RNBOUnityPlugin MODULE)
 
 set_target_properties(RNBOUnityPlugin PROPERTIES
 	#generic
 	LIBRARY_OUTPUT_DIRECTORY ${PLUGIN_DIR}
+	LIBRARY_OUTPUT_DIRECTORY_DEBUG ${PLUGIN_DIR}
+	LIBRARY_OUTPUT_DIRECTORY_RELEASE ${PLUGIN_DIR}
 	OUTPUT_NAME ${PLUGIN_NAME_ID}
 
 	#macos
@@ -144,6 +215,13 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/src/Helper.cs.asmdef.in ${HELPER_OUTPUT
 #write package.json
 configure_file(${CMAKE_CURRENT_LIST_DIR}/src/package.json.in ${PACKAGE_DIR}/package.json)
 
+if (GENERATE_META)
+	#write plugin meta, namespace is just a guid alex produced online
+	string(UUID PLUGIN_GUID NAMESPACE afee6755-c498-42a2-b023-6188a76c942c NAME ${PLUGIN_NAME_ID} TYPE SHA1)
+	STRING(REPLACE "-" "" PLUGIN_GUID ${PLUGIN_GUID})
+	configure_file(${CMAKE_CURRENT_LIST_DIR}/src/plugin.meta.in ${PLUGIN_META_PATH})
+endif()
+
 set(INSTANCE_ACCESS_HACK 0)
 if (RNBO_UNITY_INSTANCE_ACCESS_HACK)
 	set(INSTANCE_ACCESS_HACK 1)
@@ -164,6 +242,11 @@ target_compile_definitions(RNBOUnityPlugin
 )
 
 if (BUILD_SYSTEM_IS_MINGW)
+	#mingw_stdthreads doesn't have shared_lock
+	target_compile_definitions(RNBOUnityPlugin
+		PRIVATE
+		NO_SHARED_LOCK
+	)
 	target_link_libraries(RNBOUnityPlugin
 		PRIVATE
 		mingw_stdthreads
