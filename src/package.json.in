@@ -5,7 +5,7 @@
   "unity": "2017.1",
   "licensesUrl": "https://support.cycling74.com/hc/en-us/articles/10730031661587",
   "dependencies": { 
-      "com.cycling74.rnbotypes": "0.0.1"
+      "com.cycling74.rnbotypes": "0.0.2"
   },
   "keywords": [
     "rnbo",
