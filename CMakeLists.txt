@@ -15,9 +15,9 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12)
 
 #support default in either standalone or rnbo adapters/
 set(DEFAULT_CPP_DIR "${CMAKE_CURRENT_LIST_DIR}/export/rnbo/")
-set(PKG_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../")
-if (EXISTS ${PKG_CPP_DIR})
-	set(DEFAULT_CPP_DIR ${PKG_CPP_DIR})
+set(PKG_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../..")
+if (EXISTS "${PKG_CPP_DIR}/RNBO.h")
+	set(DEFAULT_CPP_DIR "${PKG_CPP_DIR}/")
 endif()
 
 set(PLUGIN_NAME "RNBOPlugin" CACHE STRING "The name of the audio plugin")
