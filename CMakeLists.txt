@@ -16,8 +16,10 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12)
 #support default in either standalone or rnbo adapters/
 set(DEFAULT_CPP_DIR "${CMAKE_CURRENT_LIST_DIR}/export/rnbo/")
 set(PKG_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../..")
+set(IS_ADAPTER_BUILD Off)
 if (EXISTS "${PKG_CPP_DIR}/RNBO.h")
 	set(DEFAULT_CPP_DIR "${PKG_CPP_DIR}/")
+	set(IS_ADAPTER_BUILD On)
 endif()
 
 set(PLUGIN_NAME "RNBOPlugin" CACHE STRING "The name of the audio plugin")
@@ -39,7 +41,9 @@ set(RNBO_DESCRIPTION_FILE ${RNBO_EXPORT_DIR}/description.json)
 set(RNBO_PRESETS_FILE ${RNBO_EXPORT_DIR}/presets.json)
 
 include(${RNBO_CPP_DIR}/cmake/CCache.cmake)
-include(${RNBO_CPP_DIR}/cmake/MinGWSTDThreads.cmake)
+if (IS_ADAPTER_BUILD)
+	include(${RNBO_CPP_DIR}/cmake/MinGWSTDThreads.cmake)
+endif()
 
 #generate description header
 include(${RNBO_CPP_DIR}/cmake/RNBODescriptionHeader.cmake)
