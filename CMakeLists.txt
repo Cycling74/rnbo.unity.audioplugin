@@ -57,6 +57,7 @@ STRING(TOLOWER ${PLUGIN_NAME_ID} PLUGIN_NAME_LOWER_ID)
 STRING(TOLOWER ${PLUGIN_MANUFACTURER_NAME_ID} PLUGIN_MANUFACTURER_NAME_LOWER_ID)
 
 set(PACKAGE_DIR ${CMAKE_BINARY_DIR}/${PLUGIN_NAME_ID})
+set(DOXYGEN_OUTPUT_DIRECTORY ${PACKAGE_DIR}/Assets/Docs/)
 
 # Test platform and bit depth
 set(BIT_DEPTH 64)
@@ -257,6 +258,20 @@ if (BUILD_SYSTEM_IS_MINGW)
 		-static-libgcc
 		-static-libstdc++
 	)
+endif()
+
+
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+	set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
+	set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+	configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT})
+
+	add_custom_target(RNBOUnityPluginDocs ALL
+		COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+		COMMENT "Generating API documentation with Doxygen"
+		VERBATIM)
 endif()
 
 install(DIRECTORY ${PACKAGE_DIR} DESTINATION .)
