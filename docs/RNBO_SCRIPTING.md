@@ -8,7 +8,7 @@ In the next few examples, we'll build a drum kit we can play in Unity using this
 
 In your Unity Project, in `Assets/Scripts/`, create a new C# script. The example below is called `DrumKit.cs`.
 
-```c#
+```csharp
 using UnityEngine
 
 public class DrumKit : MonoBehaviour

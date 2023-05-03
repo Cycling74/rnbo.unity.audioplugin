@@ -4,7 +4,7 @@ An example script, which, given a plugin called **TestOrbs**, will instantiate a
 
 More documentation coming soon!
 
-```c#
+```csharp
 using UnityEngine;
 
 [RequireComponent(typeof(AudioSource))]

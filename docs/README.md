@@ -6,14 +6,14 @@ In these guides, we'll discuss the basics of adding your RNBO device as a plugin
 
 ## Table Of Contents
 
-### [Getting Started](GETTING_STARTED.md)
-### [Addressing your RNBO Plugin from a C# Script](RNBO_SCRIPTING.md)
-### [Getting and Setting Parameters](PARAMETERS.md)
-### [Buffers and File Dependencies](BUFFERS.md)
-### [Sending and Receiving Messages](MESSAGES.md)
-### [Events related to Musical Time](TRANSPORT_TEMPO.md)
-### [Synchronizing multiple RNBO plugins](GLOBAL_TRANSPORT.md)
-### [Loading and Storing Presets](PRESETS.md)
-### [Sending MIDI Messages](MIDI.md)
-### [Making a Custom Filter](CUSTOM_FILTER.md)
+* [Getting Started](GETTING_STARTED.md)
+* [Addressing your RNBO Plugin from a C# Script](RNBO_SCRIPTING.md)
+* [Getting and Setting Parameters](PARAMETERS.md)
+* [Buffers and File Dependencies](BUFFERS.md)
+* [Sending and Receiving Messages](MESSAGES.md)
+* [Events related to Musical Time](TRANSPORT_TEMPO.md)
+* [Synchronizing multiple RNBO plugins](GLOBAL_TRANSPORT.md)
+* [Loading and Storing Presets](PRESETS.md)
+* [Sending MIDI Messages](MIDI.md)
+* [Making a Custom Filter](CUSTOM_FILTER.md)
 

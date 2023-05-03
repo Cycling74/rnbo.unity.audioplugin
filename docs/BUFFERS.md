@@ -6,7 +6,7 @@ The `buffer~` objects in our RNBO patch will create `externalDataRefs` in the ex
 
 To load an `AudioClip` into the `DataRef` identified with the above `"sampleOne"` buffer, we'll add an `AudioClip` field in Unity's inspector, get the samples and channels from whatever audio file we drag into that field, and load the data accordingly. 
 
-```c#
+```csharp
 using UnityEngine;
 
 public class DrumKit : MonoBehaviour

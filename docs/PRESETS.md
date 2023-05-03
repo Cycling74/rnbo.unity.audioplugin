@@ -6,7 +6,7 @@ When you export a RNBO patch with [presets](https://rnbo.cycling74.com/learn/pre
 
 The `JSON` of each preset has been encoded as a string and stored in the Plugin Handle's `Presets` property. To find the content of a preset, you iterate through that property to find a match for the preset's name. The following example demonstrates how to load a preset called `"bright"` on a plugin called `FeedbackPolyphonyGroup`.
 
-```c#
+```csharp
 using UnityEngine;
 using System.Linq;
 
@@ -34,7 +34,7 @@ You can also capture a preset asynchronously, using the method `.CapturePreset()
 
 The following example sets new values for this plugin's `"overblow"` and `"harmonics"` parameters when the user presses the `"T"` key, and then stores the state of the device as a new preset when the user presses `"Y"`.
 
-```c#
+```csharp
 using UnityEngine;
 
 public class PresetCapture : MonoBehaviour
