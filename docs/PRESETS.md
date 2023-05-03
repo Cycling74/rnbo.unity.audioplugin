@@ -73,4 +73,4 @@ public class PresetCapture : MonoBehaviour
 ```
 
 - Next: [Sending MIDI Messages](MIDI.md)
-- Back to the [Table of Contents](README.md#table-of-contents)
+- Back to the [Table of Contents](INDEX.md)

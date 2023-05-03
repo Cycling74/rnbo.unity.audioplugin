@@ -4,7 +4,7 @@ The RNBO Unity Audio Plugin provides an API that facilitates integration of your
 
 In these guides, we'll discuss the basics of adding your RNBO device as a plugin in a Unity project and how to use this API to add procedural audio to your game. As this integration is in an experimental state, so is this documentation, and this guide should not be considered an encyclopedic reference, but rather a quick-start with a handful of ways to use this tool.
 
-## Table Of Contents
+## Table Of Contents {#table-of-contents}
 
 * [Getting Started](GETTING_STARTED.md)
 * [Addressing your RNBO Plugin from a C# Script](RNBO_SCRIPTING.md)

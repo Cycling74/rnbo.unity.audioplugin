@@ -39,4 +39,4 @@ public class DrumKit : MonoBehaviour
 The script above has created a field `Buffer` in the inspector, which can take audio files that we've added into our Project.
 
 - Next: [Sending and Receiving Messages](MESSAGES.md)
-- Back to the [Table of Contents](README.md#table-of-contents)
+- Back to the [Table of Contents](INDEX.md)

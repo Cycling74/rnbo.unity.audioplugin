@@ -41,4 +41,4 @@ public class SendMIDI : MonoBehaviour
 ```
 
 - Next: [Making a Custom Filter](CUSTOM_FILTER.md)
-- Back to the [Table of Contents](README.md#table-of-contents)
+- Back to the [Table of Contents](INDEX.md)

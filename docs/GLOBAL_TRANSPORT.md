@@ -83,4 +83,4 @@ use if you want "global" synchronization.
 If you want to remove transport synchronization, you can send `null` to the `RegisterTransport` and or `RegisterGlobalTransport`.
 
 - Next: [Loading and Storing Presets](PRESETS.md)
-- Back to the [Table of Contents](README.md#table-of-contents)
+- Back to the [Table of Contents](INDEX.md)
