@@ -4,7 +4,7 @@ You can send MIDI Note On, Note Off, and CC messages into your RNBO Plugin, and 
 
 The following example, which uses a Plugin called `FeedbackPolyphonyGroup`, schedules a note on and note off event for a random pitch in the range of MIDI note `40` to `100` whenever the user presses the `"Q"` key. It also sends the MIDI controller number `1` the value `110` when the script is first loaded.
 
-```c#
+```csharp
 using UnityEngine;
 
 public class SendMIDI : MonoBehaviour
@@ -41,4 +41,4 @@ public class SendMIDI : MonoBehaviour
 ```
 
 - Next: [Making a Custom Filter](CUSTOM_FILTER.md)
-- Back to the [Table of Contents](README.md#table-of-contents)
+- Back to the [Table of Contents](INDEX.md)

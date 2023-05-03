@@ -6,7 +6,7 @@ You can synchronize multiple plugins having them share a `Transport`, which you 
 
 For instance, if you wanted to synchronize instances of `QuantizedBuffers` plugins to a global transport, potentially shared by other plugins, you could use `.RegisterGlobalTransport()`, like this:
 
-```c#
+```csharp
 using UnityEngine;
 using Cycling74.RNBOTypes;
 
@@ -40,7 +40,7 @@ public class DrumKit : MonoBehaviour
 
 You can also set a specific instance to have a separate transport:
 
-```c#
+```csharp
 using UnityEngine;
 using Cycling74.RNBOTypes;
 
@@ -83,4 +83,4 @@ use if you want "global" synchronization.
 If you want to remove transport synchronization, you can send `null` to the `RegisterTransport` and or `RegisterGlobalTransport`.
 
 - Next: [Loading and Storing Presets](PRESETS.md)
-- Back to the [Table of Contents](README.md#table-of-contents)
+- Back to the [Table of Contents](INDEX.md)

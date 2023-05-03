@@ -8,7 +8,7 @@ Our Drum Kit RNBO patch has a metronome we can turn on and off using the `param`
 
 To access this parameter in C#, we can do something like the following.
 
-```c#
+```csharp
 using UnityEngine;
 
 public class DrumKit : MonoBehaviour
@@ -42,7 +42,7 @@ Then, in our `Start()` method, we use the `.SetParamValue()` method, called on o
 
 ## Getting a parameter value
 
-```c#
+```csharp
     double isMetronomeOn;
 
     myQuantizedBuffersPlugin.GetParamValue(metronomeParam, out isMetronomeOn);
@@ -55,4 +55,4 @@ We could add the above to our `Start()` method in order to print the value of th
 To get the normalized value, you could use `.GetParamValueNormalized()`.
 
 - Next: [Buffers and File Dependencies](BUFFERS.md)
-- Back to the [Table of Contents](README.md#table-of-contents)
+- Back to the [Table of Contents](INDEX.md)

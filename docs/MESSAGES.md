@@ -6,7 +6,7 @@ You can send and receive messages to and from your RNBO device via message tags 
 
 This example sends a message into an inport called `"playSampleOne"`, which plays some audio from a buffer. For a description of how to load an audio file into a buffer, see [BUFFERS.md](BUFFERS.md).
 
-```c#
+```csharp
 using UnityEngine;
 
 public class DrumKit : MonoBehaviour
@@ -49,7 +49,7 @@ We can also subscribe to Message Events that come from our RNBO device. We need 
 
 This script subscribes to a plugin's Message Events, gets the name of the Message Tag, and prints the message to the Debug console along with the time the message was received.
 
-```c#
+```csharp
 using UnityEngine;
 using Cycling74.RNBOTypes;
 
@@ -74,4 +74,4 @@ public class DrumKit : MonoBehaviour
 ```
 
 - Next: [Events related to Musical Time](TRANSPORT_TEMPO.md)
-- Back to the [Table of Contents](README.md#table-of-contents)
+- Back to the [Table of Contents](INDEX.md)

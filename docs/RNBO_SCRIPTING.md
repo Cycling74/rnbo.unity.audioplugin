@@ -8,7 +8,7 @@ In the next few examples, we'll build a drum kit we can play in Unity using this
 
 In your Unity Project, in `Assets/Scripts/`, create a new C# script. The example below is called `DrumKit.cs`.
 
-```c#
+```csharp
 using UnityEngine
 
 public class DrumKit : MonoBehaviour
@@ -31,4 +31,4 @@ Here, we create a class property of type `QuantizedBuffersHelper` and another of
 Then, in our `Start()` method, we access the helper's `Plugin` member, which is a `QuantizedBuffersHandle`, in order to gain access to methods of the handle that can get or set parameters, send and receive messages, and otherwise interact with the RNBO device.
 
 - Next: [Getting and Setting Parameters](PARAMETERS.md)
-- Back to the [Table of Contents](README.md#table-of-contents)
+- Back to the [Table of Contents](INDEX.md)
