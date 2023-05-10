@@ -130,6 +130,21 @@ cp -r SimpleFreqParam/Assets/Plugins/Darwin ../build/SimpleFreqParam/Assets/Plug
 
 Then install your package into your Unity project.
 
+#### Notes for cross compiling for Android on Windows
+
+The NDK version I got with Unity doesn't have [CMAKE_ANDROID_EXCEPTIONS](https://cmake.org/cmake/help/v3.22/variable/CMAKE_ANDROID_EXCEPTIONS.html), but does support `ANDROID_CPP_FEATURES`.
+I have to set `-DANDROID_CPP_FEATURES=exceptions` on the commandline to build with the default, Visual Studio, generator. I have Visual Studio 2022 with the Android C++ build tools installed.
+I am also able to build with the `Unix Makefiles` generator and no additional comandline alterations.
+The [NDK CMake Docs](https://developer.android.com/studio/projects/configure-cmake#call-cmake-cli) use `Ninja` on Windows.
+
+Here is an example commandline for building with Visual Studio 2022 and the NDK I got from Unity.
+
+```
+mkdir build && cd build
+cmake .. -DANDROID_PLATFORM=29 -DANDROID_ABI=arm64-v8a -DCMAKE_TOOLCHAIN_FILE="C:\Program Files\Unity\Hub\Editor\2021.3.16f1\Editor\Data\PlaybackEngines\AndroidPlayer\NDK\build\cmake/android.toolchain.cmake" -DRNBO_EXPORT_DIR="Z:\Documents\export\sync-cycle" -DRNBO_CPP_DIR="Z:\Documents\export\sync-cycle\rnbo" -DPLUGIN_NAME="Sync Cycle" -DANDROID_CPP_FEATURES=exceptions
+cmake --build .
+```
+
 
 ## Resources
 
