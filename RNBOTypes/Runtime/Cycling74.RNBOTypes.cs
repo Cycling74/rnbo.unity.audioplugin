@@ -259,6 +259,8 @@ namespace Cycling74.RNBOTypes {
         
         internal void Update(MillisecondTime time, out bool run, out Float tempo, out Float beatTime, out int timeSigNum, out int timeSigDenom) {
             if (time != _lastUpdate) {
+                var last = _lastUpdate;
+
                 _lastUpdate = time;
 
                 runningCur = Running;
@@ -272,13 +274,14 @@ namespace Cycling74.RNBOTypes {
                     //advance beat time
                     beatTimeCur = BeatTime;
 
-                    MillisecondTime offset = time - Math.Max(0.0, _lastUpdate);
+                    MillisecondTime offset = time - Math.Max(0.0, last);
                     //it is an error if offset is negative
                     if (offset > 0.0) {
                         //mstobeats from rnbo
                         beatTimeCur += offset * tempoCur * 0.008 / 480.0;
                     }
                 }
+                BeatTime = beatTimeCur;
             }
 
             run = runningCur;
