@@ -37,7 +37,7 @@ extern "C" {
 	typedef void (UNITY_AUDIODSP_CALLBACK * CBeatTimeEventCallback)(void * handle, RNBO::number, RNBO::MillisecondTime);
 	typedef void (UNITY_AUDIODSP_CALLBACK * CTimeSignatureEventCallback)(void * handle, int32_t, int32_t, RNBO::MillisecondTime);
 
-	typedef void (UNITY_AUDIODSP_CALLBACK * CTransportRequestCallback)(void * handle, RNBO::MillisecondTime time, bool* running, RNBO::number* bpm, RNBO::number* beatTime, int32_t *timeSigNum, int32_t *timeSigDenom);
+	typedef void (UNITY_AUDIODSP_CALLBACK * CTransportRequestCallback)(void * handle, RNBO::MillisecondTime time, uint8_t* running, RNBO::number* bpm, RNBO::number* beatTime, int32_t *timeSigNum, int32_t *timeSigDenom);
 	typedef void (UNITY_AUDIODSP_CALLBACK * CPresetCallback)(void * handle, const char * payload);
 }
 
@@ -296,14 +296,15 @@ namespace RNBOUnity
 					transport = globalTransport;
 
 				if (transport != nullptr) {
-					bool running = false;
 					RNBO::number bpm = 0.0, beatTime = 0.0;
 					int32_t timeSigNum = 4, timeSigDenom = 4;
 
+					uint8_t runningByte = 0;
 					transport->callback<CTransportRequestCallback>()(
 							transport->handle(),
-							now, &running, &bpm, &beatTime, &timeSigNum, &timeSigDenom);
+							now, &runningByte, &bpm, &beatTime, &timeSigNum, &timeSigDenom);
 
+					bool running = runningByte != 0;
 					if (running != mTransportRunning) {
 						mTransportRunning = running;
 

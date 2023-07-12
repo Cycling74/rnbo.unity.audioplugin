@@ -178,7 +178,7 @@ namespace Cycling74.RNBOTypes {
         public List<PresetEntry> presets;
     }
 
-    public delegate void TransportRequestDelegate(IntPtr userData, MillisecondTime time, out bool running, out Float bpm, out Float beatTime, out int timeSigNum, out int timeSigDenom);
+    public delegate void TransportRequestDelegate(IntPtr userData, MillisecondTime time, out byte running, out Float bpm, out Float beatTime, out int timeSigNum, out int timeSigDenom);
 
     public class Transport {
 
@@ -243,13 +243,13 @@ namespace Cycling74.RNBOTypes {
         (UInt16, UInt16) timeSignatureCur = (4, 4);
 
         [AOT.MonoPInvokeCallback(typeof(TransportRequestDelegate))]
-        public static void AudioThreadUpdate(IntPtr inst, MillisecondTime time, out bool run, out Float tempo, out Float beatTime, out int timeSigNum, out int timeSigDenom) {
+        public static void AudioThreadUpdate(IntPtr inst, MillisecondTime time, out byte run, out Float tempo, out Float beatTime, out int timeSigNum, out int timeSigDenom) {
             GCHandle gch = GCHandle.FromIntPtr(inst);
             Transport transport = (Transport)gch.Target;
             if (transport != null) {
                 transport.Update(time, out run, out tempo, out beatTime, out timeSigNum, out timeSigDenom);
             } else {
-                run = false;
+                run = 0; //false
                 tempo = 100.0;
                 beatTime = 0.0;
                 timeSigNum  = 4;
@@ -257,7 +257,7 @@ namespace Cycling74.RNBOTypes {
             }
         }
         
-        internal void Update(MillisecondTime time, out bool run, out Float tempo, out Float beatTime, out int timeSigNum, out int timeSigDenom) {
+        internal void Update(MillisecondTime time, out byte run, out Float tempo, out Float beatTime, out int timeSigNum, out int timeSigDenom) {
             if (time != _lastUpdate) {
                 var last = _lastUpdate;
 
@@ -284,7 +284,7 @@ namespace Cycling74.RNBOTypes {
                 BeatTime = beatTimeCur;
             }
 
-            run = runningCur;
+            run = (byte)(runningCur ? 1 : 0);
             tempo = tempoCur;
             beatTime = beatTimeCur;
             timeSigNum = (int)timeSignatureCur.Item1;
