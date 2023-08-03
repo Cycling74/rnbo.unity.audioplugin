@@ -1,6 +1,6 @@
 # RNBO Unity Audio Plugin
 
-*This is experimental software—use at your own risk, and know that anything in this repository could change in the future.*
+*This is experimental software—use at your own risk, and know that anything in this repository could change in the future. See [Known Issues](#known-issues) below.*
 
 
 Here we implement a Native Audio Plugin for Unity as well as a helper object that facilitates working with that plugin.
@@ -159,7 +159,11 @@ cmake --build .
 
 ## Known Issues
 
-* **Transport Memory Leak:** if you create a lot of transports, they won't be deallocated, so you're better off re-using transports (rather than creating a new transport each time you need one) if you need more granular transport control than the global transport provides.
+* **URP and HDRP Projects**
+  - Using Unity's Built-in Renderer, this plugin should run as expected in the Unity editor and in builds. However, if you are using URP or HDRP, you can expect some audio interruptions (glitching sounds) when running your RNBO plugins in-editor. This seems to be due to a current issue with the Unity Editor. However, these audio issues do not extend to builds of your game. 
+  
+* **Transport Memory Leak** 
+  - If you create a lot of transports, they won't be deallocated, so you're better off re-using transports (rather than creating a new transport each time you need one) if you need more granular transport control than the global transport provides.
 
 ## TODO
 
