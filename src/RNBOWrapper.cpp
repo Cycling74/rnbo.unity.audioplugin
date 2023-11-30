@@ -841,6 +841,19 @@ extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOCopyLoadD
 	});
 }
 
+// here we simply send over the pointer to the data, since RNBO buffers are read/write, you have to be sure that your code doesn't try to write or resize
+// TODO can we indicate a real release?
+extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOUnsafeLoadReadOnlyDataRef(int32_t key, const char * id, const float * data, size_t datalen, size_t channels, size_t samplerate)
+{
+	return with_instance(key, [id, data, datalen, channels, samplerate](RNBOUnity::InnerData * inner) {
+			RNBO::Float32AudioBuffer bufferType(channels, static_cast<double>(samplerate));
+
+			size_t bytes = sizeof(float) * datalen;
+      char * ptr = const_cast<char *>(reinterpret_cast<const char *>(data));
+			inner->mCore.setExternalData(id, ptr, bytes, bufferType, nullptr);
+	});
+}
+
 extern "C" UNITY_AUDIODSP_EXPORT_API bool AUDIO_CALLING_CONVENTION RNBOReleaseDataRef(int32_t key, const char * id)
 {
 	return with_instance(key, [id](RNBOUnity::InnerData * inner) {
