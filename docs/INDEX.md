@@ -16,4 +16,5 @@ In these guides, we'll discuss the basics of adding your RNBO device as a plugin
 * [Loading and Storing Presets](PRESETS.md)
 * [Sending MIDI Messages](MIDI.md)
 * [Making a Custom Filter](CUSTOM_FILTER.md)
+* [Spatialisation and 3D Audio](SPATIALISATION_3D_AUDIO.md)
 
