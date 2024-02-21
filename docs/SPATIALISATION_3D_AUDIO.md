@@ -1,6 +1,6 @@
 Spatialisation of RNBO generated audio effects in Unity can seem a bit convoluted. The following describes a simple method that does not require any external frameworks.
 
-For this method we need to use a special sound file ([included in this repository]()) in our **Audio Source**, and use a couple of **`in~`** object in our rnbo~ patcher to apply the **Audio Source** spatialisation to the output of our RNBO generated audio effect.
+For this method we need to use a special sound file included in this repository ./extras/SpatialiserFix.wav in our **Audio Source**, and use a couple of **`in~`** object in our rnbo~ patcher to apply the **Audio Source** spatialisation to the output of our RNBO generated audio effect.
 
 The necessary steps are:
 **In Unity**
