@@ -26,17 +26,22 @@ There are ways to add your RNBO plugin into your project—as a plugin loaded on
 
 In this document, we'll discuss loading the plugin on an Audio Mixer. When you create a custom filter, you'll use many of the same methods to access your RNBO device, but the means of setting up the filter are distinct enough to warrant a seperate document. Visit [CUSTOM_FILTER.md](CUSTOM_FILTER.md) for that guide.
 
-### Loading your Plugin on an Audio Mixer
+### On the Audio Mixer with an Instance Index
 
 Create a new [Audio Mixer](https://docs.unity3d.com/Manual/AudioMixer.html) and add the RNBO plugin to a track as an effect—for example, the "Master" track—from the "Add..." dropdown menu.
 
 ![instance-index](images/instance-index.png)
 
-Once you've added your plugin, set an instance index — this should be an **integer** that you will use in your scripts to refer to a specific *instance* of your plugin, loaded on this Audio Mixer. Note that although Unity's default GUI indicates you should be able to set a *float* value here, you should make sure to use a whole number. 
+#### Instance Index
+Once you've added your plugin, set an **instance index** — this should be an **integer** that you will use in your scripts to refer to a specific *instance* of your plugin, loaded on this Audio Mixer. Note that although Unity's default GUI indicates you should be able to set a *float* value here, you should make sure to use a whole number. 
 
 To hear your audio plugin in Unity, add an [Audio Source](https://docs.unity3d.com/Manual/class-AudioSource.html) and set its **Output** to the Master track of this Audio Mixer.
 
-*Note that when a plugin is loaded on an Audio Mixer, it will by default create a GUI in the Inspector with sliders for each parameter. These sliders are not necessarily functional, nor do they accurately represent the current value of a parameter in your RNBO device, especially if you are setting those parameters via a C# script.*
+#### Stereo Audio
+
+Note that the Audio Mixer expects two input and two output channels -- if you plan to load the plugin in this way, you'll want to include an `[in~ 1]`, `[in~ 2]`, `[out~ 1]`, and `[out~ 2]`.
+
+*N.B. -- when a plugin is loaded on an Audio Mixer, it will by default create a GUI in the Inspector with sliders for each parameter. These sliders are not necessarily functional, nor do they accurately represent the current value of a parameter in your RNBO device, especially if you are setting those parameters via a C# script.*
 
 - Next: [Addressing your RNBO Plugin from a C# Script](RNBO_SCRIPTING.md)
 - Back to the [Table of Contents](INDEX.md)
